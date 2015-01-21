@@ -12,3 +12,6 @@ Omega_lambda = 1. - Omega_m - Omega_b - Omega_r - Omega_nu
 h0 = 0.7
 H_0 = h0 * 100 * 1e3 / Mpc
 
+# Physical constants
+c = 2.99792458e8	# m s-1
+
