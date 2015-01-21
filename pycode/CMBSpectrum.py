@@ -1,46 +1,51 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import params
+from scipy import integrate
 
-class CMBSpectrum:
+#def __init__(self, n_t, x_t, a_t, n_eta, x_eta, deta):
+#	"""
+#	An object (CMB spectrum) has attributes:
+#	n_t	  :	  Number of x-values
+#	x_t	  :	  Grid of x-values
+#	a_t	  :	  Grid of a-values (scale factor)
+#
+#	n_eta :	  Number of grid points in conformal time
+#	x_eta :	  Grid points in conformal time
+#	eta	  :	  Conformal time at each grid point
+#	eta2  :	  Spline array of eta points (I think?)
+#	"""
+#	self.n_t, self.x_t, self.a_t, self.n_eta, self.x_eta, self.eta, self.eta2 \
+#			= n_t, x_t, a_t, n_eta, x_eta, eta, eta2
 
-	def __init__(self, n_t, x_t, a_t, n_eta, x_eta, deta):
-		"""
-		An object (CMB spectrum) has attributes:
-		n_t	  :	  Number of x-values
-		x_t	  :	  Grid of x-values
-		a_t	  :	  Grid of a-values (scale factor)
+def get_H(x):
+	"""
+	Computes the Hubble parameter H at given x.
+	"""
+	a = np.exp(x)
+	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) * a**(-3) + params.Omega_r *\
+			a**(-4) + params.Omega_lambda)
 
-		n_eta :	  Number of grid points in conformal time
-		x_eta :	  Grid points in conformal time
-		eta	  :	  Conformal time at each grid point
-		eta2  :	  Spline array of eta points (I think?)
-		"""
-		self.n_t, self.x_t, self.a_t, self.n_eta, self.x_eta, self.eta, self.eta2 \
-				= n_t, x_t, a_t, n_eta, x_eta, eta, eta2
-		
-	def get_H(self, x):
-		"""
-		Computes the Hubble parameter H at given x.
-		"""
-		a = np.exp(x)
-		return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) * a**(-3) + params.Omega_r *\
-				a**(-4) + params.Omega_lambda)
+def get_H_scaled(x):
+	"""
+	Computes the scaled Hubble parameter H' = a*H at given x.
+	"""
+	a = np.exp(x)
+	return a * get_H(x)
 
-	def get_H_scaled(self, x):
-		"""
-		Computes the scaled Hubble parameter H' = a*H at given x.
-		"""
-		a = np.exp(x)
-		return a * get_H(x)
+def get_dH_scaled(x):
 
-	def get_dH_scaled(self, x):
+def get_eta(x):
+	"""
+	Computes eta(x) using the previously computed spline function.
+	"""
 
-	def get_eta(self, x):
-		"""
-		Computes eta(x) using the previously computed spline function.
-		"""
-		
+def eta_rhs(x):
+	"""
+	Solves the differential equation d eta/da = c / (a * H_p)
+	"""
+	a = np.exp(x)
+	return params.c / (a * get_H_scaled(x))
 	
 if __name__ == "__main__":
 
@@ -65,20 +70,21 @@ if __name__ == "__main__":
 	x_eta2		= 0							# End value of x for eta evaluation
 
 	# Grid for x
-	x_pre = np.linspace(int(x_start_rec), int(x_end_rec), n1)
-	x_post = np.linspace(int(x_end_rec), int(x_0), n2)
-	x_t = np.concatenate((x_pre, x_post), axis=0)	# Concatenates two arrays
+	x1 = np.linspace(int(x_start_rec), int(x_end_rec), n1)
+	x2 = np.linspace(int(x_end_rec), int(x_0), n2)
+	x_t = np.concatenate((x1, x2), axis=0)	# Concatenates two arrays
 
 	# Grid for a
 	a_t = np.exp(x_t) # Since x = ln(a)
-	
+
 	# Grid for x in conformal time
 	x_eta = np.linspace(int(x_eta1), int(x_eta2), n_eta)
+	a_eta = np.exp(x_eta)
 
-	eta = np.zeros(n_eta)
-	eta[0] = 1./params.H_0 * np.sqrt(params.Omega_r)
-	for i in xrange(n_eta):
-		eta[i] = 
+#	eta = scipy.
+#	eta[0] = 1./params.H_0 * np.sqrt(params.Omega_r)
+	da = np.exp(x_eta[1] - x_eta[0])
+
 
 
 
