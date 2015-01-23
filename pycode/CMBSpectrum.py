@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import params
-from scipy import integrate
+from scipy import integrate, interpolate
 
 #def __init__(self, n_t, x_t, a_t, n_eta, x_eta, deta):
 #	"""
@@ -23,8 +23,8 @@ def get_H(x):
 	Computes the Hubble parameter H at given x.
 	"""
 	a = np.exp(x)
-	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) * a**(-3) + params.Omega_r *\
-			a**(-4) + params.Omega_lambda)
+	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) * a**(-3) +\
+			params.Omega_r * a**(-4) + params.Omega_lambda)
 
 def get_H_scaled(x):
 	"""
@@ -34,18 +34,30 @@ def get_H_scaled(x):
 	return a * get_H(x)
 
 def get_dH_scaled(x):
+	return None
 
-def get_eta(x):
+def get_eta(x, tck):
 	"""
 	Computes eta(x) using the previously computed spline function.
 	"""
+	return splev(x, tck, der=0)
 
-def eta_rhs(x):
+def eta_rhs(eta, x0, x):
 	"""
 	Solves the differential equation d eta/da = c / (a * H_p)
 	"""
 	a = np.exp(x)
-	return params.c / (a * get_H_scaled(x))
+	return (params.c * params.m2Mpc) / (a * get_H_scaled(x))
+
+def write2file(filename, header, a, b):
+	outFile = open(filename, 'w')
+	outFile.write("# " + header + "\n")
+
+	for i in xrange(len(a)):
+		outFile.write('%.12f %.12f\n' % (a[i], b[i]))
+	  
+	outFile.close()
+
 	
 if __name__ == "__main__":
 
@@ -81,13 +93,15 @@ if __name__ == "__main__":
 	x_eta = np.linspace(int(x_eta1), int(x_eta2), n_eta)
 	a_eta = np.exp(x_eta)
 
-#	eta = scipy.
-#	eta[0] = 1./params.H_0 * np.sqrt(params.Omega_r)
-	da = np.exp(x_eta[1] - x_eta[0])
+	eta = integrate.odeint(eta_rhs, x_eta[0], x_eta, args=(x_eta,))
+
+	write2file("../data/conformal_time.txt", "Conformal time values: a_eta eta",
+			a_eta, eta)
+
+	tck = splrep(a_eta, eta, s=0)
+#	eta_ipl = splev(x_spl, tck, der=0)
 
 
+	write2file("../data/conformal_time_interpolate.txt", "Interpolated conformal
+	time values: eta_ipl
 
-
-
-
-	
