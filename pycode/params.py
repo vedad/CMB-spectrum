@@ -1,6 +1,7 @@
 import numpy as np
 
 # Units
+m2Mpc = 3.24077929e-23 # Conversion from m to Mpc
 Mpc = 3.08568025e22
 
 # Cosmological parameters
