@@ -11,7 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import params
 from scipy.integrate import odeint
-from scipy.interpolate import splrep
+from scipy.interpolate import splrep, splev
 
 #def __init__(self, n_t, x_t, a_t, n_eta, x_eta, deta):
 #	"""
@@ -53,7 +53,8 @@ def get_eta(x, tck):
 	"""
 	Computes eta(x) using the previously computed spline function.
 	"""
-	return splev(x, tck, der=0)
+	a = np.exp(x)
+	return splev(a, tck, der=0)
 
 def eta_rhs(eta, x):
 	"""
@@ -96,15 +97,15 @@ if __name__ == "__main__":
 	x_eta2		= 0							# End value of x for eta evaluation
 
 	# Grid for x
-	x1 = np.linspace(int(x_start_rec), int(x_end_rec), n1)
-	x2 = np.linspace(int(x_end_rec), int(x_0), n2)
+	x1 = np.linspace(x_start_rec, x_end_rec, n1)
+	x2 = np.linspace(x_end_rec, x_0, n2)
 	x_t = np.concatenate((x1, x2), axis=0)	# Concatenates two arrays
 
 	# Grid for a
 	a_t = np.exp(x_t) # Since x = ln(a)
 
 	# Grid for x in conformal time
-	x_eta = np.linspace(int(x_eta1), int(x_eta2), n_eta)
+	x_eta = np.linspace(x_eta1, x_eta2, n_eta)
 	a_eta = np.exp(x_eta)
 
 	# a*a*H -> H_0 * sqrt(Omega_r) as a -> 0 (which is valid for a = 1e-10)
@@ -122,7 +123,8 @@ if __name__ == "__main__":
 	tck = splrep(a_eta, eta, s=0)
 #	eta_ipl = splev(x_spl, tck, der=0)
 
-
+	testSPLEV = get_eta(0.5, tck)
+	print "Arbitrary value (a = 0.5) to test get_eta: %g" % testSPLEV
 #	write2file("../data/conformal_time_interpolate.txt",\
 #			"Interpolated conformal time values: eta_ipl
 
