@@ -1,7 +1,17 @@
+#!/usr/bin/env python
+
+"""
+Created on 19 Jan. 2015.
+
+Author: Vedad Hodzic
+E-mail:	vedad.hodzic@astro.uio.no
+"""
+
 import numpy as np
 import matplotlib.pyplot as plt
 import params
-from scipy import integrate, interpolate
+from scipy.integrate import odeint
+from scipy.interpolate import splrep
 
 #def __init__(self, n_t, x_t, a_t, n_eta, x_eta, deta):
 #	"""
@@ -23,6 +33,7 @@ def get_H(x):
 	Computes the Hubble parameter H at given x.
 	"""
 	a = np.exp(x)
+#	return params.H_0 * np.sqrt(params.Omega_M * a**(-3))
 	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) * a**(-3) +\
 			params.Omega_r * a**(-4) + params.Omega_lambda)
 
@@ -31,7 +42,9 @@ def get_H_scaled(x):
 	Computes the scaled Hubble parameter H' = a*H at given x.
 	"""
 	a = np.exp(x)
-	return a * get_H(x)
+#	return params.H_0 * np.sqrt((params.Omega_M / a))
+	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) / a +\
+			params.Omega_r / (a * a) + params.Omega_lambda * a * a)
 
 def get_dH_scaled(x):
 	return None
@@ -42,12 +55,13 @@ def get_eta(x, tck):
 	"""
 	return splev(x, tck, der=0)
 
-def eta_rhs(eta, x0, x):
+def eta_rhs(eta, x):
 	"""
 	Solves the differential equation d eta/da = c / (a * H_p)
 	"""
 	a = np.exp(x)
-	return (params.c * params.m2Mpc) / (a * get_H_scaled(x))
+	rhs = (params.c * params.m2Mpc) / (a * get_H_scaled(x))
+	return rhs
 
 def write2file(filename, header, a, b):
 	outFile = open(filename, 'w')
@@ -93,15 +107,22 @@ if __name__ == "__main__":
 	x_eta = np.linspace(int(x_eta1), int(x_eta2), n_eta)
 	a_eta = np.exp(x_eta)
 
-	eta = integrate.odeint(eta_rhs, x_eta[0], x_eta, args=(x_eta,))
+	# a*a*H -> H_0 * sqrt(Omega_r) as a -> 0 (which is valid for a = 1e-10)
+	eta0 = (params.c * params.m2Mpc) / (params.H_0 * np.sqrt(params.Omega_r))
+
+	# Solve the differential equation for eta
+	eta = odeint(eta_rhs, eta0, x_eta)
 
 	write2file("../data/conformal_time.txt", "Conformal time values: a_eta eta",
 			a_eta, eta)
+
+	write2file("../data/hubble_constant.txt", "Hubble constant values: H a",
+			a_eta, (params.Mpc / 1e3) * get_H(x_eta))
 
 	tck = splrep(a_eta, eta, s=0)
 #	eta_ipl = splev(x_spl, tck, der=0)
 
 
-	write2file("../data/conformal_time_interpolate.txt", "Interpolated conformal
-	time values: eta_ipl
+#	write2file("../data/conformal_time_interpolate.txt",\
+#			"Interpolated conformal time values: eta_ipl
 
