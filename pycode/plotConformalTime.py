@@ -14,16 +14,18 @@ inFile = np.loadtxt('../data/conformal_time.txt')
 
 data = {}
 
-data['x_eta'] = inFile[:,0]
+data['a_eta'] = inFile[:,0]
 data['eta'] = inFile[:,1]
 
 fig_eta, ax_eta = plt.subplots()
 ax_eta.set_xlabel('$a$')
 ax_eta.set_ylabel('$\eta$ [Mpc]')
-ax_eta.plot(data['x_eta'], data['eta'], lw=1.5)
+ax_eta.plot(data['a_eta'], data['eta'], lw=1.5)
 
 ax_eta.set_xscale('log')
 ax_eta.set_yscale('log')
 
 fig_eta.tight_layout()
 fig_eta.savefig('../results/conformal_time.pdf')
+
+print "Conformal time at a = 1 (today): %.2f Mpc" % data['eta'][-1]
