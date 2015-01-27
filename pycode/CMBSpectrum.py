@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 import params
 from scipy.integrate import odeint
 from scipy.interpolate import splrep, splev
+import inspect
 
 #def __init__(self, n_t, x_t, a_t, n_eta, x_eta, deta):
 #	"""
@@ -46,8 +47,24 @@ def get_H_scaled(x):
 	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) / a +\
 			params.Omega_r / (a * a) + params.Omega_lambda * a * a)
 
+def get_dH_scaled_num(x):
+	"""
+	Computes the derivative of H_p by "brute force".
+	"""
+	H = get_H_scaled(x)
+
+	return (H[1:] - H[:-1]) / (x[1:] - x[:-1])
+
+
 def get_dH_scaled(x):
-	return None
+	"""
+	Computes the derivative of H_p.
+	"""
+	a = np.exp(x)
+	return params.H_0 * a / (np.sqrt((params.Omega_b + params.Omega_m)/a +\
+			params.Omega_r/(a*a) + params.Omega_lambda * a * a)) *\
+			(-(params.Omega_b + Omega_m)/(a*a) - 2*params.Omega_r/(a*a*a) +\
+			2*params.Omega_lambda * a)
 
 def get_eta(x, tck):
 	"""
@@ -65,6 +82,9 @@ def eta_rhs(eta, x):
 	return rhs
 
 def write2file(filename, header, a, b):
+	# Returns # of arguments in write2file
+#	arg_len = len(inspect.getargspec(write2file)[0])
+
 	outFile = open(filename, 'w')
 	outFile.write("# " + header + "\n")
 
@@ -114,17 +134,22 @@ if __name__ == "__main__":
 	# Solve the differential equation for eta
 	eta = odeint(eta_rhs, eta0, x_eta)
 
+	tck = splrep(a_eta, eta)
+#	print "Arbitrary value (a = 0.5) to test get_eta: %g" % testSPLEV
+	x_ipl = np.linspace(x_eta1, x_eta2, n_eta + 1000)
+	a_ipl = np.exp(x_ipl)
+	eta_ipl = get_eta(x_ipl, tck)
+
 	write2file("../data/conformal_time.txt", "Conformal time values: a_eta eta",
 			a_eta, eta)
 
 	write2file("../data/hubble_constant.txt", "Hubble constant values: H a",
 			a_eta, (params.Mpc / 1e3) * get_H(x_eta))
 
-	tck = splrep(a_eta, eta, s=0)
-#	eta_ipl = splev(x_spl, tck, der=0)
+	write2file("../data/conformal_time_ipl.txt",\
+			"Interpolated conformal time values: a_ipl eta_ipl", a_ipl, eta_ipl)
 
-	testSPLEV = get_eta(0.5, tck)
-	print "Arbitrary value (a = 0.5) to test get_eta: %g" % testSPLEV
-#	write2file("../data/conformal_time_interpolate.txt",\
-#			"Interpolated conformal time values: eta_ipl
+#	write2file("../data/hubble_constant_deriv.txt", "Derivative of scaled Hubble
+#	constant: a_
 
+	
