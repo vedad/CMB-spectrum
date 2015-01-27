@@ -1,8 +1,8 @@
 import numpy as np
 
 # Units
-m2Mpc = 3.24077929e-23 # Conversion from m to Mpc
 Mpc = 3.08568025e22
+m2Mpc = 1./Mpc # Conversion from m to Mpc
 
 # Cosmological parameters
 Omega_b = 0.046
