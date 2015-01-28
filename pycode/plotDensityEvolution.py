@@ -30,6 +30,7 @@ ax_evo.plot(data['a'], data['Omega_r'], lw=1.5, label='$\Omega_\mathrm{r}$')
 ax_evo.plot(data['a'], data['Omega_lambda'], lw=1.5, label='$\Omega_\lambda$')
 
 ax_evo.set_xscale('log')
+ax_evo.set_ylim([-0.05,1.05])
 
 ax_evo.legend(loc='best')
 
