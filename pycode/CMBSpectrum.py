@@ -81,6 +81,23 @@ def eta_rhs(eta, x):
 	rhs = (params.c * params.m2Mpc) / (a * get_H_scaled(x))
 	return rhs
 
+def get_rho_c(x):
+	"""
+	Computes the critical density for given time.
+	"""
+	return 3 * get_H(x)*get_H(x) / (8 * np.pi * params.G)
+
+def get_Omega_m(x):
+	"""
+	Computes the time evolution of dark matter.
+	"""
+	a = np.exp(x)
+
+	rho_m0 = params.rho_c0 * params.Omega_m
+	rho_m = rho_m0 / (a*a*a)
+
+	return rho_m / get_rho_c(x)
+
 def write2file(filename, header, a, b):
 	# Returns # of arguments in write2file
 #	arg_len = len(inspect.getargspec(write2file)[0])
