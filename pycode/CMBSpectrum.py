@@ -120,15 +120,27 @@ def get_Omega_r(x):
 
 	return rho_r / get_rho_c(x)
 
-def write2file(filename, header, a, b):
+def get_Omega_lambda(x):
+	"""
+	Computes the time evolution of the cosmological constant.
+	"""
+	return 1. - get_Omega_m(x) - get_Omega_b(x) - get_Omega_r(x)
+
+def write2file(filename, header, arg1, arg2, arg3=None, arg4=None, arg5=None):
 	# Returns # of arguments in write2file
 #	arg_len = len(inspect.getargspec(write2file)[0])
 
 	outFile = open(filename, 'w')
 	outFile.write("# " + header + "\n")
 
-	for i in xrange(len(a)):
-		outFile.write('%.12f %.12f\n' % (a[i], b[i]))
+	if (arg3 or arg4 or arg5) is None:
+	  	for i in xrange(len(arg1)):
+			outFile.write('%.12f %.12f\n' % (arg1[i], arg2[i]))
+
+	if (arg3 or arg4 or arg5) is not None:
+		for i in xrange(len(arg1)):
+			outFile.write('%.12f %.12f %.12f %.12f %.12f\n' %\
+					(arg1[i], arg2[i], arg3[i], arg4[i], arg5[i]))
 	  
 	outFile.close()
 
