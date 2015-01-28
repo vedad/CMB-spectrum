@@ -98,6 +98,28 @@ def get_Omega_m(x):
 
 	return rho_m / get_rho_c(x)
 
+def get_Omega_b(x):
+	"""
+	Computes the time evolution of baryons.
+	"""
+	a = np.exp(x)
+
+	rho_b0 = params.rho_c0 * params.Omega_b
+	rho_b = rho_b0 / (a*a*a)
+	
+	return rho_b / get_rho_c(x)
+
+def get_Omega_r(x):
+	"""
+	Computes the time evolution of radiation.
+	"""
+	a = np.exp(x)
+
+	rho_r0 = params.rho_c0 * params.Omega_r
+	rho_r = rho_r0 / (a*a*a*a)
+
+	return rho_r / get_rho_c(x)
+
 def write2file(filename, header, a, b):
 	# Returns # of arguments in write2file
 #	arg_len = len(inspect.getargspec(write2file)[0])
