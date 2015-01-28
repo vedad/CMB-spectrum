@@ -127,8 +127,9 @@ def get_Omega_lambda(x):
 	return 1. - get_Omega_m(x) - get_Omega_b(x) - get_Omega_r(x)
 
 def write2file(filename, header, *args):
-	# Returns # of arguments in write2file
-#	arg_len = len(inspect.getargspec(write2file)[0])
+	"""
+	Function that writes data to specified filename.
+	"""
 
 	outFile = open(filename, 'w')
 	outFile.write("# " + header + "\n")
@@ -138,17 +139,6 @@ def write2file(filename, header, *args):
 			outFile.write('%.12f ' % arg[i])
 		outFile.write('\n')
 
-	# For writing two columns to file
-#	if (arg3 or arg4 or arg5) is None:
-#	  	for i in xrange(len(arg1)):
-#			outFile.write('%.12f %.12f\n' % (arg1[i], arg2[i]))
-
-	# For writing five columns to file
-#	if (arg3 or arg4 or arg5) is not None:
-#		for i in xrange(len(arg1)):
-#			outFile.write('%.12f %.12f %.12f %.12f %.12f\n' %\
-#					(arg1[i], arg2[i], arg3[i], arg4[i], arg5[i]))
-	  
 	outFile.close()
 
 	
@@ -201,22 +191,24 @@ if __name__ == "__main__":
 	eta_ipl = get_eta(x_ipl, tck)
 
 	dH = get_dH_scaled(x_eta)
-#	dH_num = get_dH_scaled_num(x_eta)
 
+	# Write conformal time data to file
 	write2file("../data/conformal_time.txt", "Conformal time values: a_eta eta",
 			a_eta, eta)
 
-	write2file("../data/hubble_constant.txt", "Hubble constant values: H a",
-			a_eta, (params.Mpc / 1e3) * get_H(x_eta))
-
+	# Write interpolated conformal time data to file (used for comparison)
 	write2file("../data/conformal_time_ipl.txt",\
 			"Interpolated conformal time values: a_ipl eta_ipl", a_ipl, eta_ipl)
 
+	# Write Hubble constant data to file
+	write2file("../data/hubble_constant.txt", "Hubble constant values: a x H",
+			a_eta, x_eta, (params.Mpc / 1e3) * get_H(x_eta))
+
+	# Write scaled Hubble constant data to file
 	write2file("../data/hubble_constant_deriv.txt",\
 			"Derivative of scaled Hubble constant: a_eta dH", a_eta, dH)
 
-#	write2file("../data/hubble_constant_deriv_num.txt",\
-#			"Numerical derivative of scaled Hubble constant: a_eta dH_num", a_eta, dH_num)
+	# Write density evolution of universe components to file
 	write2file("../data/density_evolution.txt",\
 			"Time evolution of cosmological parameters: a Omega_m Omega_b\
 			Omega_r Omega_lambda", a_eta, get_Omega_m(x_eta),\
