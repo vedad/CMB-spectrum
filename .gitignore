@@ -3,3 +3,7 @@
 *.mod
 *.o
 cmbspec
+report/
+results/
+testDeriv.py
+testODE.py
