@@ -17,5 +17,10 @@ the horizon and the density parameters for the LCDM universe.
 #### Milestone IV: The CMB power spectrum
 ***
 
-To see the newest version at any time, check the `dev-mac` branch. All changes will be merged to
-`master` at the end of each milestone.
+Description of the different milestones will be updated continuously.
+
+To see the newest version of the code at any time, check the `dev-mac` branch:
+* `pycode` contains Python code for plotting, but also code that computes Milestone I.
+* `src` contains Fortran 90 code that will be used throughout the rest of the milestones.
+
+All changes will be merged to `master` at the end of each milestone.
