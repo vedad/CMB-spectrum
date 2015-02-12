@@ -10,6 +10,7 @@ Here we calculate some of the background cosmology, such as the evolutions of th
 the horizon and the density parameters for the LCDM universe.
 ***
 #### Milestone II: The recombination history of the universe
+###### In progress
 ***
 #### Milestone III: The evolution of structures in the universe
 ***
