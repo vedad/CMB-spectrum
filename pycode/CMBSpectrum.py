@@ -7,34 +7,18 @@ Author: Vedad Hodzic
 E-mail:	vedad.hodzic@astro.uio.no
 """
 
-import numpy as np
-import matplotlib.pyplot as plt
-import params
-from scipy.integrate import odeint
-from scipy.interpolate import splrep, splev
-import inspect
-
-#def __init__(self, n_t, x_t, a_t, n_eta, x_eta, deta):
-#	"""
-#	An object (CMB spectrum) has attributes:
-#	n_t	  :	  Number of x-values
-#	x_t	  :	  Grid of x-values
-#	a_t	  :	  Grid of a-values (scale factor)
-#
-#	n_eta :	  Number of grid points in conformal time
-#	x_eta :	  Grid points in conformal time
-#	eta	  :	  Conformal time at each grid point
-#	eta2  :	  Spline array of eta points (I think?)
-#	"""
-#	self.n_t, self.x_t, self.a_t, self.n_eta, self.x_eta, self.eta, self.eta2 \
-#			= n_t, x_t, a_t, n_eta, x_eta, eta, eta2
+import numpy as np							  # Functions, mathematical operators
+import matplotlib.pyplot as plt				  # Plotting
+import params								  # Module for physical constants and parameters
+from scipy.integrate import odeint			  # ODE solver
+from scipy.interpolate import splrep, splev	  # Spline interpolation
 
 def get_H(x):
 	"""
 	Computes the Hubble parameter H at given x.
 	"""
 	a = np.exp(x)
-#	return params.H_0 * np.sqrt(params.Omega_M * a**(-3))
+
 	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) * a**(-3) +\
 			params.Omega_r * a**(-4) + params.Omega_lambda)
 
@@ -43,24 +27,16 @@ def get_H_scaled(x):
 	Computes the scaled Hubble parameter H' = a*H at given x.
 	"""
 	a = np.exp(x)
-#	return params.H_0 * np.sqrt((params.Omega_M / a))
+
 	return params.H_0 * np.sqrt((params.Omega_m + params.Omega_b) / a +\
 			params.Omega_r / (a * a) + params.Omega_lambda * a * a)
-
-def get_dH_scaled_num(x):
-	"""
-	Computes the derivative of H_p by "brute force".
-	"""
-	H = get_H_scaled(x)
-
-	return (H[1:] - H[:-1]) / (x[1:] - x[:-1])
-
 
 def get_dH_scaled(x):
 	"""
 	Computes the derivative of H_p.
 	"""
 	a = np.exp(x)
+
 	return params.H_0 * a / (np.sqrt((params.Omega_b + params.Omega_m)/a +\
 			params.Omega_r/(a*a) + params.Omega_lambda * a * a)) *\
 			(-(params.Omega_b + params.Omega_m)/(a*a) - 2*params.Omega_r/(a*a*a) +\
@@ -71,14 +47,15 @@ def get_eta(x, tck):
 	Computes eta(x) using the previously computed spline function.
 	"""
 	a = np.exp(x)
+
 	return splev(a, tck, der=0)
 
 def eta_rhs(eta, x):
 	"""
 	Solves the differential equation d eta/da = c / (a * H_p)
 	"""
-	a = np.exp(x)
-	rhs = (params.c * params.m2Mpc) / (a * get_H_scaled(x))
+	rhs = params.c / get_H_scaled(x)
+
 	return rhs
 
 def get_rho_c(x):
@@ -89,7 +66,7 @@ def get_rho_c(x):
 
 def get_Omega_m(x):
 	"""
-	Computes the time evolution of dark matter.
+	Computes the time evolution of dark matter density.
 	"""
 	a = np.exp(x)
 
@@ -100,7 +77,7 @@ def get_Omega_m(x):
 
 def get_Omega_b(x):
 	"""
-	Computes the time evolution of baryons.
+	Computes the time evolution of baryon density.
 	"""
 	a = np.exp(x)
 
@@ -111,7 +88,7 @@ def get_Omega_b(x):
 
 def get_Omega_r(x):
 	"""
-	Computes the time evolution of radiation.
+	Computes the time evolution of radiation density.
 	"""
 	a = np.exp(x)
 
@@ -122,13 +99,15 @@ def get_Omega_r(x):
 
 def get_Omega_lambda(x):
 	"""
-	Computes the time evolution of the cosmological constant.
+	Computes the time evolution of the cosmological constant density.
 	"""
 	return 1. - get_Omega_m(x) - get_Omega_b(x) - get_Omega_r(x)
 
 def write2file(filename, header, *args):
 	"""
 	Function that writes data to specified filename.
+	Required arguments: filename, header
+	Optional arguments: args (arrays that are to be written to file)
 	"""
 
 	outFile = open(filename, 'w')
@@ -141,7 +120,6 @@ def write2file(filename, header, *args):
 
 	outFile.close()
 
-	
 if __name__ == "__main__":
 
 	### Initialization
@@ -165,53 +143,37 @@ if __name__ == "__main__":
 	x_eta2		= 0.						# End value of x for eta evaluation
 
 	# Grid for x
-	x1 = np.linspace(x_start_rec, x_end_rec, n1)
-	x2 = np.linspace(x_end_rec, x_0, n2)
-	x_t = np.concatenate((x1, x2), axis=0)	# Concatenates two arrays
+	x1			= np.linspace(x_start_rec, x_end_rec, n1)
+	x2			= np.linspace(x_end_rec, x_0, n2)
+	x_t			= np.concatenate((x1, x2), axis=0)
 
 	# Grid for a
-	a_t = np.exp(x_t) # Since x = ln(a)
+	a_t			= np.exp(x_t)				# Since x = ln(a)
 
 	# Grid for x in conformal time
-	x_eta = np.linspace(x_eta1, x_eta2, n_eta)
-	a_eta = np.exp(x_eta)
+	x_eta		= np.linspace(x_eta1, x_eta2, n_eta)
+	a_eta		= np.exp(x_eta)
 
-	# a*a*H -> H_0 * sqrt(Omega_r) as a -> 0 (which is valid for a = 1e-10)
-	eta0 = (params.c * params.m2Mpc) / (params.H_0 * np.sqrt(params.Omega_r))
-	print "eta0: %g Mpc" % eta0
+	# Initial value for eta
+	eta0		= (params.c / (params.H_0 *\
+				  np.sqrt(params.Omega_r))) * a_init
 
 	# Solve the differential equation for eta
-	eta = odeint(eta_rhs, eta0, x_eta)
-	eta = eta[:,0]
+	eta			= odeint(eta_rhs, eta0, x_eta)
+	eta			= eta[:,0]
 
-	tck = splrep(a_eta, eta)
-#	print "Arbitrary value (a = 0.5) to test get_eta: %g" % testSPLEV
-	x_ipl = np.linspace(x_eta1, x_eta2, n_eta + 1000)
-	a_ipl = np.exp(x_ipl)
-	eta_ipl = get_eta(x_ipl, tck)
-
-	dH = get_dH_scaled(x_eta)
+	tck			= splrep(a_eta, eta)		# tck's of the spline function
 
 	# Write conformal time data to file
 	write2file("../data/conformal_time.txt", "Conformal time values: a_eta eta",
-			a_eta, eta)
-
-	# Write interpolated conformal time data to file (used for comparison)
-	write2file("../data/conformal_time_ipl.txt",\
-			"Interpolated conformal time values: a_ipl eta_ipl", a_ipl, eta_ipl)
+			a_eta, x_eta, eta / params.Mpc)
 
 	# Write Hubble constant data to file
 	write2file("../data/hubble_constant.txt", "Hubble constant values: a x H",
 			a_eta, x_eta, (params.Mpc / 1e3) * get_H(x_eta))
 
-	# Write scaled Hubble constant data to file
-	write2file("../data/hubble_constant_deriv.txt",\
-			"Derivative of scaled Hubble constant: a_eta dH", a_eta, dH)
-
-	# Write density evolution of universe components to file
+	# Write density parameters data to file
 	write2file("../data/density_evolution.txt",\
 			"Time evolution of cosmological parameters: a Omega_m Omega_b\
-			Omega_r Omega_lambda", a_eta, get_Omega_m(x_eta),\
+			Omega_r Omega_lambda", a_eta, x_eta, get_Omega_m(x_eta),\
 			get_Omega_b(x_eta), get_Omega_r(x_eta), get_Omega_lambda(x_eta))
-
-	
