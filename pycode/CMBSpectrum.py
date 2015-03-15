@@ -15,7 +15,11 @@ from scipy.interpolate import splrep, splev	  # Spline interpolation
 
 def get_H(x):
 	"""
-	Computes the Hubble parameter H at given x.
+	Computes the Hubble parameter H.
+	--------------------------------
+	x		  :	float, array
+	returns	  :	float, array
+	--------------------------------
 	"""
 	a = np.exp(x)
 
@@ -24,7 +28,11 @@ def get_H(x):
 
 def get_H_scaled(x):
 	"""
-	Computes the scaled Hubble parameter H' = a*H at given x.
+	Computes the scaled Hubble parameter H' = a*H.
+	----------------------------------------------
+	x		  :	float, array
+	returns	  :	float, array
+	----------------------------------------------
 	"""
 	a = np.exp(x)
 
@@ -34,17 +42,26 @@ def get_H_scaled(x):
 def get_dH_scaled(x):
 	"""
 	Computes the derivative of H_p.
+	-------------------------------
+	x		  :	float, array
+	returns	  : float, array
+	-------------------------------
 	"""
 	a = np.exp(x)
 
-	return params.H_0 * a / (np.sqrt((params.Omega_b + params.Omega_m)/a +\
-			params.Omega_r/(a*a) + params.Omega_lambda * a * a)) *\
+	return params.H_0 / (np.sqrt((params.Omega_b + params.Omega_m)/a**3 +\
+			params.Omega_r/a**4) + params.Omega_lambda) *\
 			(-(params.Omega_b + params.Omega_m)/(a*a) - 2*params.Omega_r/(a*a*a) +\
 			2*params.Omega_lambda * a)
 
 def get_eta(x, tck):
 	"""
-	Computes eta(x) using the previously computed spline function.
+	Computes eta(x) using tck from the previously computed spline function.
+	-----------------------------------------------------------------------
+	x		  : float, array
+	tck		  : tuple
+	returns	  :	float, array
+	-----------------------------------------------------------------------
 	"""
 	a = np.exp(x)
 
@@ -52,7 +69,13 @@ def get_eta(x, tck):
 
 def eta_rhs(eta, x):
 	"""
-	Solves the differential equation d eta/da = c / (a * H_p)
+	Solves the differential equation d eta/da = c / (a * H_p).
+	(eta is needed as argument for the ODE solver)
+	----------------------------------------------------------
+	eta		  : float, array
+	x		  : float, array
+	returns	  :	float, array
+	----------------------------------------------------------
 	"""
 	rhs = params.c / get_H_scaled(x)
 
@@ -61,12 +84,21 @@ def eta_rhs(eta, x):
 def get_rho_c(x):
 	"""
 	Computes the critical density for given time.
+	---------------------------------------------
+	x		  :	float, array
+	returns	  :	float, array
+	---------------------------------------------
 	"""
 	return 3 * get_H(x)*get_H(x) / (8 * np.pi * params.G)
 
 def get_Omega_m(x):
 	"""
 	Computes the time evolution of dark matter density.
+	---------------------------------------------------
+	x		  : float, array
+	returns	  :	float, array
+	---------------------------------------------------
+
 	"""
 	a = np.exp(x)
 
@@ -78,6 +110,11 @@ def get_Omega_m(x):
 def get_Omega_b(x):
 	"""
 	Computes the time evolution of baryon density.
+	----------------------------------------------
+	x		  : float, array
+	returns	  :	float, array
+	----------------------------------------------
+
 	"""
 	a = np.exp(x)
 
@@ -89,6 +126,10 @@ def get_Omega_b(x):
 def get_Omega_r(x):
 	"""
 	Computes the time evolution of radiation density.
+	-------------------------------------------------
+	x		  : float, array
+	returns	  :	float, array
+	-------------------------------------------------
 	"""
 	a = np.exp(x)
 
@@ -100,14 +141,21 @@ def get_Omega_r(x):
 def get_Omega_lambda(x):
 	"""
 	Computes the time evolution of the cosmological constant density.
+	-----------------------------------------------------------------
+	x		  : float, array
+	returns	  :	float, array
+	-----------------------------------------------------------------
 	"""
 	return 1. - get_Omega_m(x) - get_Omega_b(x) - get_Omega_r(x)
 
 def write2file(filename, header, *args):
 	"""
-	Function that writes data to specified filename.
-	Required arguments: filename, header
-	Optional arguments: args (arrays that are to be written to file)
+	Function that writes data (args) to specified filename.
+	-------------------------------------------------------
+	filename  :	string
+	header	  :	string
+	args	  :	array	  (optional)
+	-------------------------------------------------------
 	"""
 
 	outFile = open(filename, 'w')
@@ -133,7 +181,7 @@ if __name__ == "__main__":
 	z_end_rec	= 614.2					    # Redshift at end of recombination
 	z_0			= 0.						# Redshift today
 
-	x_start_rec = -np.log(1. + z_start_rec)	# x at start of recombination
+	x_start_rec	= -np.log(1. + z_start_rec)	# x at start of recombination
 	x_end_rec	= -np.log(1. + z_end_rec)	# x at end of recombination
 	x_0			= 0.						# x today
 
@@ -162,7 +210,8 @@ if __name__ == "__main__":
 	eta			= odeint(eta_rhs, eta0, x_eta)
 	eta			= eta[:,0]
 
-	tck			= splrep(a_eta, eta)		# tck's of the spline function
+	# Finding the vector of knots, B-spline  coefficients and degree of spline
+	tck			= splrep(a_eta, eta)
 
 	# Write conformal time data to file
 	write2file("../data/conformal_time.txt", "Conformal time values: a_eta eta",
