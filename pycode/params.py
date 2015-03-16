@@ -2,6 +2,8 @@ import numpy as np
 
 # Units
 Mpc				  = 3.08568025e22			# m
+eV				  = 1.60217646e-19			# Electron volt
+
 
 # Physical constants
 c				  = 2.99792458e8			# m s-1
