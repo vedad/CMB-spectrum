@@ -43,12 +43,19 @@ def get_saha(x):
 	T_b = get_baryon_temperature(x)
 
 	a = 1.
-	b = 1./n_b * ((2 * np.pi * params.m_e * params.k_b * T_b) /\
-			(params.hbar*params.hbar))**1.5 *\
-			np.exp(-params.epsilon_0 / ((params.k_b * T_b)/params.eV))
+	b = 1./n_b * (params.m_e * params.k_b * T_b /\
+			(2 * np.pi * params.hbar*params.hbar))**1.5 *\
+			np.exp(-params.epsilon_0 / (params.k_b * T_b))
 	c = -b
 	
 	return (-b + np.sqrt(b*b - 4*a*c))/(2*a)	# Other solution is always negative
+
+def get_n_e(x, tck):
+	"""
+	Calculates the electron density at arbitrary time x from a splined grid.
+	"""
+	
+	return 10**(splev(x, tck, der=0))
 
 def get_peebles(X_e, x):
 	"""
@@ -59,23 +66,25 @@ def get_peebles(X_e, x):
 	H	= CMBSpectrum.get_H(x)
 
 	n_1s			= (1 - X_e) * n_b
-	Lambda_2s_1s		= 8.227
-	Lambda_alpha	= H * (3 * params.epsilon_0 * params.eV)**3. /\
+	Lambda_2s_1s	= 8.227
+	Lambda_alpha	= H * (3 * params.epsilon_0)**3. /\
 						(64 * np.pi * np.pi * (params.c * params.hbar)**3. *\
 						n_1s)
-	phi2			= 0.448 * np.log(params.epsilon_0 / ((params.k_b * T_b) /\
-						params.eV))
+	phi2			= 0.448 * np.log(params.epsilon_0 / (params.k_b * T_b))
 	alpha2			= 64 * np.pi / np.sqrt(27 * np.pi) * params.alpha *\
 						params.alpha / (params.m_e * params.m_e) *\
-						np.sqrt(params.epsilon_0 / ((params.k_b * T_b) /\
-						params.eV)) * phi2
-	beta			= alpha2 / (params.hbar * params.c) *\
-						((params.m_e * params.k_b * T_b) / (2 * np.pi))**1.5\
-						* np.exp(-params.epsilon_0 / ((params.k_b * T_b) /\
-						params.eV))
-	beta2			= beta * np.exp((3 * params.epsilon_0) /\
-						((4 * params.k_b * T_b) / params.eV))
-	C_r				= (Lambda_2s_1s + Lambda_alpha) /\
+						params.hbar * params.hbar / params.c *\
+						np.sqrt(params.epsilon_0 / (params.k_b * T_b)) * phi2
+	beta			= alpha2 * (params.m_e * params.k_b * T_b / (2 * np.pi *\
+						params.hbar * params.hbar))**1.5 *\
+						np.exp(-params.epsilon_0 / (params.k_b * T_b))
+	beta2			= alpha2 * (params.m_e * params.k_b * T_b / (2 * np.pi *\
+						params.hbar * params.hbar))**1.5 *\
+						np.exp(-params.epsilon_0 / (4 * params.k_b * T_b))
+	if x > -6.35:
+		C_r			= 1.
+	else:
+		C_r			= (Lambda_2s_1s + Lambda_alpha) /\
 						(Lambda_2s_1s + Lambda_alpha + beta2)
 
 	return C_r / H * (beta * (1 - X_e) - n_b * alpha2 * X_e * X_e)
@@ -84,12 +93,12 @@ if __name__ == "__main__":
 
 	start = time.time()
 
-	saha_limit	= 0.99					  # Switch from Saha to Peebls when X_e > 0.99
-	xstart	    = np.log(1e-10)		  # Start grids at a = 10^(-10)
+	saha_limit	= 0.99					  # Switch from Saha to Peebles when X_e > 0.99
+	xstart	    = np.log(1e-10)			  # Start grids at a = 10^(-10)
 	xstop		= 0.0					  # Stop grids at a = 1
 	n			= 1000					  # Number of grid points between xstart and xstop
 
-	x_e			= np.linspace(np.log(1./(1800+1)), np.log(1./(100+1)), n)
+	x_e			= np.linspace(np.log(1./(1850+1)), np.log(1./(0+1)), n)
 
 	X_e			= np.zeros(n)
 	tau			= np.zeros(n)
@@ -107,32 +116,43 @@ if __name__ == "__main__":
 	X_e_val		= X_e[0]
 	i = 1
 
+#	use_saha = True
+	print "Initialised with Saha equation."
 	while X_e_val > 0.99:
 		X_e[i] = get_saha(x_e[i])
 		X_e_val = X_e[i]
-		i += 1
-#		print i
-#		print X_e_val
+ 		i += 1
 
-	print X_e
-	print X_e[:i]
-	print X_e[i-1]
-	print X_e[i-2]
+	print "Change to Peebles' equation at z = %g" % (1./np.exp(x_e[i-1]) - 1)
+	
+	"""
+	print ((X_e[i-3] - X_e[i-4]) / (x_e[i-3] - x_e[i-4]))
+	print ((X_e[i-2] - X_e[i-3]) / (x_e[i-2] - x_e[i-3]))	  # -0.31
+	print ((X_e[i-1] - X_e[i-2]) / (x_e[i-1] - x_e[i-2]))
+#	print get_peebles(X_e[i-2], x_e[i-2])
+#	print get_peebles(X_e[i-1], x_e[i-1])					  # -5.1e-12
+	i0 = i
+	i1 = i-1
+	i2 = i-2
+	print X_e[i-4:i+3]
+	"""
 
 	X_e[i-1:] = odeint(get_peebles, X_e[i-2], x_e[i-1:])[:,0]
 
-	print X_e[i-1:]
+	"""
+	print get_peebles(X_e[i2-1], x_e[i2-1])
+	print get_peebles(X_e[i2], x_e[i2])
+	print get_peebles(X_e[i1], x_e[i1])
+	print get_peebles(X_e[i0], x_e[i0])
+	"""
 
-#	for i in xrange(1,n):
-#		if X_e[i-1] > saha_limit:
-#			X_e[i] = get_saha(x_e[i])
-#		else:
-#			X_e[i] = odeint(get_peebles, X_e[i-1], x_e[i])
+	n_e = X_e * get_proton_density(x_e)
+
+	tck = splrep(x_e, np.log10(n_e))
 
 	CMBSpectrum.write2file("../data/milestone2/electron_fraction.txt",\
 			"Evolution of the electron fraction as function of redshift: x\
 			X_e", x_e, X_e)
-
 
 	stop = time.time()
 
