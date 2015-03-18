@@ -8,7 +8,7 @@ eV				  = 1.60217646e-19			# Electron volt
 # Physical constants
 c				  = 2.99792458e8			# m s-1
 G				  = 6.67258e-11				# m3 kg-1 s-2
-epsilon_0		  = 13.605698				# Ionization energy for H I
+epsilon_0		  = 13.605698 * eV			# Ionization energy for H I
 m_e				  = 9.10938188e-31			# Mass of electron [kg]
 m_H				  = 1.673534e-27			# Mass of H [kg]
 sigma_T			  =	6.652462e-29			# Thomson cross-section [m2]
