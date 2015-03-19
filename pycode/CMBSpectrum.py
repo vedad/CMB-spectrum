@@ -54,7 +54,7 @@ def get_dH_scaled(x):
 			(-(params.Omega_b + params.Omega_m)/(a*a) - 2*params.Omega_r/(a*a*a) +\
 			2*params.Omega_lambda * a)
 
-def get_eta(x, tck):
+def get_eta(x):
 	"""
 	Computes eta(x) using tck from the previously computed spline function.
 	-----------------------------------------------------------------------
@@ -65,7 +65,7 @@ def get_eta(x, tck):
 	"""
 	a = np.exp(x)
 
-	return splev(a, tck, der=0)
+	return splev(a, tck_eta, der=0)
 
 def eta_rhs(eta, x):
 	"""
@@ -168,61 +168,62 @@ def write2file(filename, header, *args):
 
 	outFile.close()
 
+
+### Initialization
+
+# Define two epochs: 1) during and 2) after recombination
+n1			= 200						# Number of grid points during recombination
+n2			= 300						# Number of grid points after recombination
+n_t			= n1 + n2					# Total number of grid points
+
+z_start_rec = 1630.4					# Redshift at start of recombination
+z_end_rec	= 614.2					    # Redshift at end of recombination
+z_0			= 0.						# Redshift today
+
+x_start_rec	= -np.log(1. + z_start_rec)	# x at start of recombination
+x_end_rec	= -np.log(1. + z_end_rec)	# x at end of recombination
+x_0			= 0.						# x today
+
+n_eta		= 1000						# Number of eta grid points (for spline)
+a_init		= 1e-10						# Start value of a for eta evaluation
+x_eta1		= np.log(a_init)			# Start value of x for eta evaluation
+x_eta2		= 0.						# End value of x for eta evaluation
+
+# Grid for x
+x1			= np.linspace(x_start_rec, x_end_rec, n1)
+x2			= np.linspace(x_end_rec, x_0, n2)
+x_t			= np.concatenate((x1, x2), axis=0)
+
+# Grid for a
+a_t			= np.exp(x_t)				# Since x = ln(a)
+
+# Grid for x in conformal time
+x_eta		= np.linspace(x_eta1, x_eta2, n_eta)
+a_eta		= np.exp(x_eta)
+
+# Initial value for eta
+eta0		= (params.c / (params.H_0 *\
+			  np.sqrt(params.Omega_r))) * a_init
+
+# Solve the differential equation for eta
+eta			= odeint(eta_rhs, eta0, x_eta)
+eta			= eta[:,0]
+
+# Finding the vector of knots, B-spline  coefficients and degree of spline
+tck_eta		= splrep(a_eta, eta)
+
 if __name__ == "__main__":
 
-	### Initialization
-
-	# Define two epochs: 1) during and 2) after recombination
-	n1			= 200						# Number of grid points during recombination
-	n2			= 300						# Number of grid points after recombination
-	n_t			= n1 + n2					# Total number of grid points
-
-	z_start_rec = 1630.4					# Redshift at start of recombination
-	z_end_rec	= 614.2					    # Redshift at end of recombination
-	z_0			= 0.						# Redshift today
-
-	x_start_rec	= -np.log(1. + z_start_rec)	# x at start of recombination
-	x_end_rec	= -np.log(1. + z_end_rec)	# x at end of recombination
-	x_0			= 0.						# x today
-
-	n_eta		= 1000						# Number of eta grid points (for spline)
-	a_init		= 1e-10						# Start value of a for eta evaluation
-	x_eta1		= np.log(a_init)			# Start value of x for eta evaluation
-	x_eta2		= 0.						# End value of x for eta evaluation
-
-	# Grid for x
-	x1			= np.linspace(x_start_rec, x_end_rec, n1)
-	x2			= np.linspace(x_end_rec, x_0, n2)
-	x_t			= np.concatenate((x1, x2), axis=0)
-
-	# Grid for a
-	a_t			= np.exp(x_t)				# Since x = ln(a)
-
-	# Grid for x in conformal time
-	x_eta		= np.linspace(x_eta1, x_eta2, n_eta)
-	a_eta		= np.exp(x_eta)
-
-	# Initial value for eta
-	eta0		= (params.c / (params.H_0 *\
-				  np.sqrt(params.Omega_r))) * a_init
-
-	# Solve the differential equation for eta
-	eta			= odeint(eta_rhs, eta0, x_eta)
-	eta			= eta[:,0]
-
-	# Finding the vector of knots, B-spline  coefficients and degree of spline
-	tck			= splrep(a_eta, eta)
-
 	# Write conformal time data to file
-	write2file("../data/conformal_time.txt", "Conformal time values: a_eta eta",
+	write2file("../data/milestone1/conformal_time.txt", "Conformal time values: a_eta eta",
 			a_eta, x_eta, eta / params.Mpc)
 
 	# Write Hubble constant data to file
-	write2file("../data/hubble_constant.txt", "Hubble constant values: a x H",
+	write2file("../data/milestone1/hubble_constant.txt", "Hubble constant values: a x H",
 			a_eta, x_eta, (params.Mpc / 1e3) * get_H(x_eta))
 
 	# Write density parameters data to file
-	write2file("../data/density_evolution.txt",\
+	write2file("../data/milestone1/density_evolution.txt",\
 			"Time evolution of cosmological parameters: a Omega_m Omega_b\
 			Omega_r Omega_lambda", a_eta, x_eta, get_Omega_m(x_eta),\
 			get_Omega_b(x_eta), get_Omega_r(x_eta), get_Omega_lambda(x_eta))
