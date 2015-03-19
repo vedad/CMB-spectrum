@@ -13,7 +13,7 @@ from scipy.integrate import odeint			  # ODE solver
 from scipy.interpolate import splrep, splev	  # Spline interpolation
 import time									  # Time module for runtime
 import params								  # Module for physical constants and parameters
-import CMBSpectrum
+from CMBSpectrum import get_H, get_H_scaled, write2file
 
 def get_n_p(x):
 	"""
@@ -56,7 +56,7 @@ def get_peebles(X_e, x):
 	"""
 	n_b = get_n_p(x)
 	T_b = get_T_b(x)
-	H	= CMBSpectrum.get_H(x)
+	H	= get_H(x)
 
 	n_1s			= (1 - X_e) * n_b
 	Lambda_2s_1s	= 8.227
@@ -82,115 +82,91 @@ def get_peebles(X_e, x):
 
 	return C_r / H * (beta * (1 - X_e) - n_b * alpha2 * X_e * X_e)
 
-def tau_rhs(tau, x, n_e):
+def tau_rhs(tau, x):
 	"""
 	Right-hand side of differential equation of optical depth.
 	Needed for odeint (ODE solver).
 	"""
-	a = np.exp(x)
 
 	# No negative sign because we solve the ODE from today and back in time (?)
-	return n_e * params.sigma_T * a / CMBSpectrum.get_H_scaled(x)
+	return - get_n_e(x) * params.sigma_T * params.c / get_H(x)
 
-def get_n_e(x, tck):
+def get_n_e(x):
 	"""
 	Calculates the electron density at arbitrary time x from a splined grid.
 	"""
 
-	tck = splrep(x, np.log10(n_e))
-	return 10**(splev(x, tck, der=0))
+	# Splined log(n_e), hence 10**(...)
+	return 10**(splev(x, tck_n_e, der=0))
 
-def get_tau(x, tck):
+def get_tau(x):
 	"""
 	Calculates the optical depth as function of x using previously splined grid.
 	"""
-	return 10**(splev(x, tck, der=0))	
+	return splev(x, tck_tau, der=0)
 	
 
+start = time.time()
+
+saha_limit	= 0.99					  # Switch from Saha to Peebles when X_e > 0.99
+xstart	    = np.log(1e-10)			  # Start grids at a = 10^(-10)
+xstop		= 0.0					  # Stop grids at a = 1
+n			= 1000					  # Number of grid points between xstart and xstop
+
+X_e			= np.zeros(n)
+tau			= np.zeros(n)
+tau2		= np.zeros(n)
+tau22		= np.zeros(n)
+n_e			= np.zeros(n)
+n_e2		= np.zeros(n)
+g			= np.zeros(n)
+g2			= np.zeros(n)
+g22			= np.zeros(n)
+
+x_rec		= np.linspace(xstart, xstop, n)
+
+# Find electron fraction > 0.99 by solving Saha equation
+X_e[0]		= get_saha(x_rec[0])
+X_e_val		= X_e[0]
+i = 1
+
+while X_e_val > 0.99:
+	X_e[i]	= get_saha(x_rec[i])
+	X_e_val	= X_e[i]
+ 	i += 1
+
+print "Change to Peebles' equation at z = %g" % (1./np.exp(x_rec[i-2]) - 1)
+
+# Find rest of electron fraction by solving Peebles' equation
+X_e[i-2:] = odeint(get_peebles, X_e[i-2], x_rec[i-2:])[:,0]
+
+# Compute electron density
+n_e		= X_e * get_n_p(x_rec)
+
+# Spline log of electron density (smoother spline)
+tck_n_e	= splrep(x_rec, np.log10(n_e))
+
+# Compute optical depth
+tau0	= 0.0
+tau		= odeint(tau_rhs, tau0, x_rec[::-1])[:,0][::-1]
+
+# Spline tau
+tck_tau	= splrep(x_rec, tau)
+
+# Spline dtau
+tck_dtau = splrep(x_rec, tau_rhs(x_rec))
+
+stop = time.time()
+
+print "Runtime: %g seconds." % (stop - start)
 
 if __name__ == "__main__":
 
-	start = time.time()
-
-	saha_limit	= 0.99					  # Switch from Saha to Peebles when X_e > 0.99
-	xstart	    = np.log(1e-10)			  # Start grids at a = 10^(-10)
-	xstop		= 0.0					  # Stop grids at a = 1
-	n			= 1000					  # Number of grid points between xstart and xstop
-
-	X_e			= np.zeros(n)
-	tau			= np.zeros(n)
-	tau2		= np.zeros(n)
-	tau22		= np.zeros(n)
-	n_e			= np.zeros(n)
-	n_e2		= np.zeros(n)
-	g			= np.zeros(n)
-	g2			= np.zeros(n)
-	g22			= np.zeros(n)
-
-	# Grid for tau
-	x_rec		= np.linspace(xstart, xstop, n)
-
-	# Grid for electron fraction
-	x_e			= np.linspace(np.log(1./(1850+1)), 0.0, n)
-	
-	X_e[0]		= get_saha(x_e[0])
-	X_e_val		= X_e[0]
-	i = 1
-
-	print "Initialised with Saha equation."
-
-	# Find electron fraction > 0.99 by solving Saha equation
-	while X_e_val > 0.99:
-		X_e[i]	= get_saha(x_e[i])
-		X_e_val	= X_e[i]
- 		i += 1
-
-	print "Change to Peebles' equation at z = %g" % (1./np.exp(x_e[i-1]) - 1)
-	
-	"""
-	print ((X_e[i-3] - X_e[i-4]) / (x_e[i-3] - x_e[i-4]))
-	print ((X_e[i-2] - X_e[i-3]) / (x_e[i-2] - x_e[i-3]))	  # -0.31
-	print ((X_e[i-1] - X_e[i-2]) / (x_e[i-1] - x_e[i-2]))
-#	print get_peebles(X_e[i-2], x_e[i-2])
-#	print get_peebles(X_e[i-1], x_e[i-1])					  # -5.1e-12
-	i0 = i
-	i1 = i-1
-	i2 = i-2
-	print X_e[i-4:i+3]
-	"""
-
-	# Find rest of electron fraction by solving Peebles' equation
-	X_e[i-1:] = odeint(get_peebles, X_e[i-2], x_e[i-1:])[:,0]
-
-	"""
-	print get_peebles(X_e[i2-1], x_e[i2-1])
-	print get_peebles(X_e[i2], x_e[i2])
-	print get_peebles(X_e[i1], x_e[i1])
-	print get_peebles(X_e[i0], x_e[i0])
-	"""
-
-	# Compute electron density
-	n_e		= X_e * get_n_p(x_e)
-
-	# Spline log of electron density (smoother spline)
-	tck_n_e	= splrep(x_e, np.log10(n_e))
-
-	# Compute optical depth
-	tau0	= 0.0
-	tau		= odeint(tau_rhs, tau0, x_rec, args=(n_e,))[:,0]
-	print x_rec
-#	print tau
-
-	# Spline tau
-	tck_tau	= splrep(x_rec, tau)
-
-	CMBSpectrum.write2file("../data/milestone2/electron_fraction.txt",\
+	write2file("../data/milestone2/electron_fraction.txt",\
 			"Evolution of the electron fraction as function of redshift: x\
-			X_e", x_e, X_e)
+			X_e", x_rec, X_e)
 
-	CMBSpectrum.write2file("../data/milestone2/optical_depth.txt",\
+	write2file("../data/milestone2/optical_depth.txt",\
 			"Optical depth as function of time: x tau", x_rec, tau)
 
-	stop = time.time()
-
-	print "Runtime: %g seconds." % (stop - start)
+	
