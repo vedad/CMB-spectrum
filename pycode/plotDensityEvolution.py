@@ -10,7 +10,7 @@ E-mail:	vedad.hodzic@astro.uio.no
 import numpy as np
 import matplotlib.pyplot as plt
 
-inFile = np.loadtxt('../data/density_evolution.txt')
+inFile = np.loadtxt('../data/milestone1/density_evolution.txt')
 
 # (empty) dictionary with data to be filled
 data = {}
@@ -47,7 +47,7 @@ ax_a.legend(loc='best')
 
 # Save figure and crop
 fig_a.tight_layout()
-fig_a.savefig('../results/density_evolution_a.pdf', bbox_inches='tight')
+fig_a.savefig('../results/milestone1/density_evolution_a.pdf', bbox_inches='tight')
 # --------------------------
 
 # Density evolution with x
@@ -67,5 +67,5 @@ ax_x.set_ylim([-0.05,1.05])
 ax_x.legend(loc='best', bbox_to_anchor=(0.4,0.7))
 
 fig_x.tight_layout()
-fig_x.savefig('../results/density_evolution_x.pdf', bbox_inches='tight')
+fig_x.savefig('../results/milestone1/density_evolution_x.pdf', bbox_inches='tight')
 # --------------------------
