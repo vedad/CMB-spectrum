@@ -52,7 +52,8 @@ def get_saha(x):
 
 def get_peebles(X_e, x):
 	"""
-	Calculates the fractional electron density X_e from Peebles' equation.
+	Calculates the fractional electron density
+	X_e from Peebles' equation.
 	"""
 	n_b = get_n_p(x)
 	T_b = get_T_b(x)
@@ -84,8 +85,8 @@ def get_peebles(X_e, x):
 
 def tau_rhs(tau, x):
 	"""
-	Right-hand side of differential equation of optical depth.
-	Needed for odeint (ODE solver).
+	Right-hand side of differential equation of optical
+	depth. Needed for odeint (ODE solver).
 	"""
 
 	# No negative sign because we solve the ODE from today and back in time (?)
@@ -93,7 +94,8 @@ def tau_rhs(tau, x):
 
 def get_n_e(x):
 	"""
-	Calculates the electron density at arbitrary time x from a splined grid.
+	Calculates the electron density at arbitrary
+	time x from a splined grid.
 	"""
 
 	# Splined log(n_e), hence 10**(...)
@@ -101,10 +103,44 @@ def get_n_e(x):
 
 def get_tau(x):
 	"""
-	Calculates the optical depth as function of x using previously splined grid.
+	Calculates the optical depth as function
+	of x using previously splined grid.
 	"""
 	return splev(x, tck_tau, der=0)
-	
+
+def get_dtau(x):
+	"""
+	Calculates the first derivative of the
+	(splined) optical depth as function of x.
+	"""
+	return splev(x, tck_tau, der=1)
+
+def get_ddtau(x):
+	"""
+	Calculates the second derivative of the
+	(splined) optical depth as function of x.
+	"""
+	return splev(x, tck_ddtau, der=0)
+
+def get_g(x):
+	"""
+	Computes the visibility function at arbitrary x.
+	"""
+	return splev(x, tck_g, der=0)
+
+def get_dg(x):
+	"""
+	Computes the derivative of the visibility
+	function at arbitrary x.
+	"""
+	return splev(x, tck_g, der=1)
+
+def get_ddg(x):
+	"""
+	Computes the second derivative of the
+	visibility function at arbitrary x.
+	"""
+	return splev(x, tck_ddg, der=0)
 
 start = time.time()
 
@@ -147,14 +183,49 @@ n_e		= X_e * get_n_p(x_rec)
 tck_n_e	= splrep(x_rec, np.log10(n_e))
 
 # Compute optical depth
-tau0	= 0.0
-tau		= odeint(tau_rhs, tau0, x_rec[::-1])[:,0][::-1]
+tau0	  = 0.0
+tau		  = odeint(tau_rhs, tau0, x_rec[::-1])[:,0][::-1]
 
 # Spline tau
-tck_tau	= splrep(x_rec, tau)
+tck_tau	  = splrep(x_rec, tau)
 
+# Compute dtau
+tau2	  = get_dtau(x_rec)
+#print tau2
+
+# Compute ddtau first time for spline
+tau22	  = splev(x_rec, tck_tau, der=2)
+
+# Spline ddtau
+tck_ddtau = splrep(x_rec, tau22)
+
+# Compute new ddtau from spline
+tau22	  =	get_ddtau(x_rec)
+
+# Compute the visibility function (g_tilde)
+g		  = - tau2 * np.exp(-tau)
+#g		  = - get_dtau(x_rec) * np.exp(-get_tau(x_rec))
+#print tau
+print g
+
+# Spline g
+tck_g	  = splrep(x_rec, g)
+	
+# Compute dg
+g2		  =	get_dg(x_rec)
+
+# Compute ddg first time for spline
+g22		  =	splev(x_rec, tck_g, der=2)
+
+# Spline ddg
+tck_ddg	  =	splrep(x_rec, g22)
+
+# Compute new ddg from spline
+g22		  =	get_ddg(x_rec)
+
+#print tau22
 # Spline dtau
-tck_dtau = splrep(x_rec, tau_rhs(x_rec))
+#tck_dtau  = splrep(x_rec, tau2)
 
 stop = time.time()
 
@@ -167,6 +238,9 @@ if __name__ == "__main__":
 			X_e", x_rec, X_e)
 
 	write2file("../data/milestone2/optical_depth.txt",\
-			"Optical depth as function of time: x tau", x_rec, tau)
+			"Optical depth, its first and second derivatives\
+			as function of time: x tau dtau ddtau", x_rec, tau, tau2, tau22)
 
-	
+	write2file("../data/milestone2/visibility_function.txt",\
+			"Visibility function and its first and second derivatives\
+			as function of time: x g dg ddg", x_rec, g, g2, g22)
