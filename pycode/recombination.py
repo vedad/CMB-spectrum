@@ -25,7 +25,6 @@ def get_n_p(x):
 	"""
 	a = np.exp(x)
 
-#	return (CMBSpectrum.get_Omega_b(x) * params.rho_c0) / (params.m_H * a**3)
 	return (params.Omega_b * params.rho_c0) / (params.m_H * a**3)
 
 def get_T_b(x):
@@ -197,15 +196,13 @@ def get_ddg(x):
 
 start = time.time()
 
-saha_limit	= 0.99					  # Switch from Saha to Peebles when X_e > 0.99
-xstart	    = np.log(1e-10)			  # Start grids at a = 10^(-10)
-xstop		= 0.0					  # Stop grids at a = 1
-n			= 1000					  # Number of grid points between xstart and xstop
+saha_limit	= 0.99			 # Switch from Saha to Peebles when X_e > 0.99
+xstart	    = np.log(1e-10)	 # Start grids at a = 10^(-10)
+xstop		= 0.0			 # Stop grids at a = 1
+n			= 1000			 # Number of grid points between xstart and xstop
 
 X_e			= np.zeros(n)
 tau			= np.zeros(n)
-n_e			= np.zeros(n)
-g			= np.zeros(n)
 
 x_rec		= np.linspace(xstart, xstop, n)
 
@@ -231,8 +228,8 @@ n_e		  = X_e * get_n_p(x_rec)
 tck_n_e	  = splrep(x_rec, np.log(n_e))
 
 # Compute optical depth
-tau0	  = 0.0
-tau		  = odeint(tau_rhs, tau0, x_rec[::-1])[:,0][::-1]
+tau[0]	  = 0.0
+tau		  = odeint(tau_rhs, tau[0], x_rec[::-1])[:,0][::-1]
 
 # Spline tau
 tck_tau	  = splrep(x_rec[:-1], np.log(tau[:-1]))
@@ -250,6 +247,8 @@ print "Runtime: %g seconds." % (stop - start)
 if __name__ == "__main__":
 	
 	# Testing splined functions
+	X_e_test	= get_n_e(x_rec) / get_n_p(x_rec)
+
 	tau_test	= get_tau(x_rec)
 	dtau_test	= get_dtau(x_rec)
 	ddtau_test	= get_ddtau(x_rec)
@@ -263,7 +262,7 @@ if __name__ == "__main__":
 	# Results from electron fraction
 	write2file("../data/milestone2/electron_fraction.txt",\
 			"Evolution of the electron fraction as function of redshift: x\
-			X_e", x_rec, X_e)
+			X_e", x_rec, X_e_test)
 
 	# Results from optical depth
 	write2file("../data/milestone2/optical_depth.txt",\
