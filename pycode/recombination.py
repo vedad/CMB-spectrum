@@ -18,6 +18,10 @@ from CMBSpectrum import get_H, get_H_scaled, write2file
 def get_n_p(x):
 	"""
 	Calculates the proton density n_b.
+	----------------------------------
+	x			: float, array
+	returns	  	: float, array
+	----------------------------------
 	"""
 	a = np.exp(x)
 
@@ -27,7 +31,10 @@ def get_n_p(x):
 def get_T_b(x):
 	"""
 	Calculates the baryon temperature of the universe.
-	Assumes T_b = T_r = T_0 / a
+	--------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	--------------------------------------------------
 	"""
 	a = np.exp(x)
 
@@ -36,8 +43,11 @@ def get_T_b(x):
 
 def get_saha(x):
 	"""
-	Calculates the fractional electron density X_e = n_e/n_H
-	from Saha's equation.
+	Calculates the fractional electron density from Saha's equation.
+	----------------------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	----------------------------------------------------------------
 	"""
 	n_b = get_n_p(x)
 	T_b = get_T_b(x)
@@ -48,99 +58,142 @@ def get_saha(x):
 			np.exp(-params.epsilon_0 / (params.k_b * T_b))
 	c = -b
 	
-	return (-b + np.sqrt(b*b - 4*a*c))/(2*a)	# Other solution is always negative
+	return (-b + np.sqrt(b*b - 4*a*c))/(2*a) # Other solution is always negative
 
 def get_peebles(X_e, x):
 	"""
-	Calculates the fractional electron density
-	X_e from Peebles' equation.
+	Calculates the fractional electron density from Peebles' equation.
+	------------------------------------------------------------------
+	X_e			: float
+	x			: float, array
+	returns	  	: float, array
+	------------------------------------------------------------------
 	"""
 	n_b = get_n_p(x)
 	T_b = get_T_b(x)
 	H	= get_H(x)
 
-	n_1s			= (1 - X_e) * n_b
-	Lambda_2s_1s	= 8.227
-	Lambda_alpha	= H * (3 * params.epsilon_0)**3. /\
-						(64 * np.pi * np.pi * (params.c * params.hbar)**3. *\
-						n_1s)
-	phi2			= 0.448 * np.log(params.epsilon_0 / (params.k_b * T_b))
-	alpha2			= 64 * np.pi / np.sqrt(27 * np.pi) * params.alpha *\
-						params.alpha / (params.m_e * params.m_e) *\
-						params.hbar * params.hbar / params.c *\
-						np.sqrt(params.epsilon_0 / (params.k_b * T_b)) * phi2
-	beta			= alpha2 * (params.m_e * params.k_b * T_b / (2 * np.pi *\
-						params.hbar * params.hbar))**1.5 *\
-						np.exp(-params.epsilon_0 / (params.k_b * T_b))
-	beta2			= alpha2 * (params.m_e * params.k_b * T_b / (2 * np.pi *\
-						params.hbar * params.hbar))**1.5 *\
-						np.exp(-params.epsilon_0 / (4 * params.k_b * T_b))
+	n_1s		  = (1 - X_e) * n_b
+	Lambda_2s_1s  = 8.227
+	Lambda_alpha  = H * (3 * params.epsilon_0)**3. /\
+					(64 * np.pi * np.pi * (params.c * params.hbar)**3. *\
+					n_1s)
+	phi2		  = 0.448 * np.log(params.epsilon_0 / (params.k_b * T_b))
+	alpha2		  = 64 * np.pi / np.sqrt(27 * np.pi) * params.alpha *\
+					params.alpha / (params.m_e * params.m_e) *\
+					params.hbar * params.hbar / params.c *\
+					np.sqrt(params.epsilon_0 / (params.k_b * T_b)) * phi2
+	beta		  = alpha2 * (params.m_e * params.k_b * T_b / (2 * np.pi *\
+					params.hbar * params.hbar))**1.5 *\
+					np.exp(-params.epsilon_0 / (params.k_b * T_b))
+	beta2		  = alpha2 * (params.m_e * params.k_b * T_b / (2 * np.pi *\
+					params.hbar * params.hbar))**1.5 *\
+					np.exp(-params.epsilon_0 / (4 * params.k_b * T_b))
+
 	if x > -6.35:
-		C_r			= 1.
+		C_r	= 1.
 	else:
-		C_r			= (Lambda_2s_1s + Lambda_alpha) /\
-						(Lambda_2s_1s + Lambda_alpha + beta2)
+		C_r	= (Lambda_2s_1s + Lambda_alpha) /\
+				(Lambda_2s_1s + Lambda_alpha + beta2)
 
 	return C_r / H * (beta * (1 - X_e) - n_b * alpha2 * X_e * X_e)
 
 def tau_rhs(tau, x):
 	"""
-	Right-hand side of differential equation of optical
-	depth. Needed for odeint (ODE solver).
+	Right-hand side of differential equation of optical depth.
+	Needed for odeint (ODE solver).
+	----------------------------------------------------------
+	tau			: float
+	x			: float, array
+	returns	  	: float, array
+	----------------------------------------------------------
 	"""
-
-	# No negative sign because we solve the ODE from today and back in time (?)
 	return - get_n_e(x) * params.sigma_T * params.c / get_H(x)
 
 def get_n_e(x):
 	"""
-	Calculates the electron density at arbitrary
-	time x from a splined grid.
-	"""
+	Calculates the electron density at arbitrary time x.
+	----------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	----------------------------------------------------
 
-	# Splined log(n_e), hence 10**(...)
-	return 10**(splev(x, tck_n_e, der=0))
+	"""
+	# Note:	ext is a keyword argument to specify what to return when
+	#		the input x is outside of the precomputed grid. The number
+	#		3 is an integer code to return the boundary value.
+	return np.exp(splev(x, tck_n_e, der=0, ext=3))
 
 def get_tau(x):
 	"""
-	Calculates the optical depth as function
-	of x using previously splined grid.
+	Calculates the optical depth at arbitrary time x.
+	-------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	-------------------------------------------------
 	"""
-	return splev(x, tck_tau, der=0)
+	return np.exp(splev(x, tck_tau, der=0, ext=3))
 
 def get_dtau(x):
 	"""
-	Calculates the first derivative of the
-	(splined) optical depth as function of x.
+	Calculates the first derivative of the optical depth
+	at arbitrary time x.
+	-----------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	-----------------------------------------------------
 	"""
-	return splev(x, tck_tau, der=1)
+	return get_tau(x) * splev(x, tck_tau, der=1, ext=3)
 
 def get_ddtau(x):
 	"""
-	Calculates the second derivative of the
-	(splined) optical depth as function of x.
+	Calculates the second derivative of the optical depth at
+	arbitrary time x.
+	--------------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	--------------------------------------------------------
 	"""
-	return splev(x, tck_ddtau, der=0)
+	return get_tau(x) * splev(x, tck_tau, der=2, ext=3) + get_dtau(x) *\
+			get_dtau(x) / get_tau(x)
 
 def get_g(x):
 	"""
-	Computes the visibility function at arbitrary x.
+	Computes the visibility function at arbitrary time x.
+	-----------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	-----------------------------------------------------
 	"""
-	return splev(x, tck_g, der=0)
+	return splev(x, tck_g, der=0, ext=3)
 
 def get_dg(x):
 	"""
-	Computes the derivative of the visibility
-	function at arbitrary x.
+	Computes the first derivative of the visibility function
+	at arbitrary time x.
+	--------------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	--------------------------------------------------------
 	"""
-	return splev(x, tck_g, der=1)
+	return splev(x, tck_g, der=1, ext=3)
 
 def get_ddg(x):
 	"""
-	Computes the second derivative of the
-	visibility function at arbitrary x.
+	Computes the second derivative of the visibility function
+	at arbitrary time x.
+	---------------------------------------------------------
+	x			: float, array
+	returns	  	: float, array
+	---------------------------------------------------------
 	"""
-	return splev(x, tck_ddg, der=0)
+	# Note: splev returns continuous values for derivatives by specifying
+	#		der=1 for first derivative, der=2 for second derivative.
+	#		No need to spline the discrete double derivatives as mentioned
+	#		in the exercise text.
+	return splev(x, tck_g, der=2, ext=3)
+
+### Initialization
 
 start = time.time()
 
@@ -151,13 +204,8 @@ n			= 1000					  # Number of grid points between xstart and xstop
 
 X_e			= np.zeros(n)
 tau			= np.zeros(n)
-tau2		= np.zeros(n)
-tau22		= np.zeros(n)
 n_e			= np.zeros(n)
-n_e2		= np.zeros(n)
 g			= np.zeros(n)
-g2			= np.zeros(n)
-g22			= np.zeros(n)
 
 x_rec		= np.linspace(xstart, xstop, n)
 
@@ -177,70 +225,54 @@ print "Change to Peebles' equation at z = %g" % (1./np.exp(x_rec[i-2]) - 1)
 X_e[i-2:] = odeint(get_peebles, X_e[i-2], x_rec[i-2:])[:,0]
 
 # Compute electron density
-n_e		= X_e * get_n_p(x_rec)
+n_e		  = X_e * get_n_p(x_rec)
 
 # Spline log of electron density (smoother spline)
-tck_n_e	= splrep(x_rec, np.log10(n_e))
+tck_n_e	  = splrep(x_rec, np.log(n_e))
 
 # Compute optical depth
 tau0	  = 0.0
 tau		  = odeint(tau_rhs, tau0, x_rec[::-1])[:,0][::-1]
 
 # Spline tau
-tck_tau	  = splrep(x_rec, tau)
+tck_tau	  = splrep(x_rec[:-1], np.log(tau[:-1]))
 
-# Compute dtau
-tau2	  = get_dtau(x_rec)
-#print tau2
-
-# Compute ddtau first time for spline
-tau22	  = splev(x_rec, tck_tau, der=2)
-
-# Spline ddtau
-tck_ddtau = splrep(x_rec, tau22)
-
-# Compute new ddtau from spline
-tau22	  =	get_ddtau(x_rec)
-
-# Compute the visibility function (g_tilde)
-g		  = - tau2 * np.exp(-tau)
-#g		  = - get_dtau(x_rec) * np.exp(-get_tau(x_rec))
-#print tau
-print g
+# Calculate g for spline
+g		  =	- get_dtau(x_rec) * np.exp(-get_tau(x_rec))
 
 # Spline g
 tck_g	  = splrep(x_rec, g)
 	
-# Compute dg
-g2		  =	get_dg(x_rec)
-
-# Compute ddg first time for spline
-g22		  =	splev(x_rec, tck_g, der=2)
-
-# Spline ddg
-tck_ddg	  =	splrep(x_rec, g22)
-
-# Compute new ddg from spline
-g22		  =	get_ddg(x_rec)
-
-#print tau22
-# Spline dtau
-#tck_dtau  = splrep(x_rec, tau2)
-
 stop = time.time()
 
 print "Runtime: %g seconds." % (stop - start)
 
 if __name__ == "__main__":
+	
+	# Testing splined functions
+	tau_test	= get_tau(x_rec)
+	dtau_test	= get_dtau(x_rec)
+	ddtau_test	= get_ddtau(x_rec)
 
+	g_test		= get_g(x_rec)
+	dg_test		= get_dg(x_rec)
+	ddg_test	= get_ddg(x_rec)
+
+	### Writing results to files
+
+	# Results from electron fraction
 	write2file("../data/milestone2/electron_fraction.txt",\
 			"Evolution of the electron fraction as function of redshift: x\
 			X_e", x_rec, X_e)
 
+	# Results from optical depth
 	write2file("../data/milestone2/optical_depth.txt",\
 			"Optical depth, its first and second derivatives\
-			as function of time: x tau dtau ddtau", x_rec, tau, tau2, tau22)
+			as function of time: x tau dtau ddtau", x_rec, tau_test,\
+			dtau_test, ddtau_test)
 
+	# Results from visibility function
 	write2file("../data/milestone2/visibility_function.txt",\
 			"Visibility function and its first and second derivatives\
-			as function of time: x g dg ddg", x_rec, g, g2, g22)
+			as function of time: x g dg ddg", x_rec, g_test, dg_test,\
+			ddg_test)
