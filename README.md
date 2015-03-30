@@ -23,5 +23,7 @@ the optical depth and visibility function as functions of time.
 Description of the different milestones will be updated continuously.
 
 To see the newest version of the code at any time, check the `dev-mac` branch:
-* `pycode` contains Python code for plotting, but also code that computes Milestone I.
-* `src` contains Fortran 90 code that will be used throughout the rest of the milestones.
+* `pycode` contains Python code for the milestones, including plotting.
+* ~~`src` contains Fortran 90 code that will be used throughout the rest of the milestones.~~
+Continued with Python. Have not had to use Fortran (yet...)
+
