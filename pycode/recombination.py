@@ -216,8 +216,6 @@ while X_e_val > 0.99:
 	X_e_val	= X_e[i]
  	i += 1
 
-print "Change to Peebles' equation at z = %g" % (1./np.exp(x_rec[i-2]) - 1)
-
 # Find rest of electron fraction by solving Peebles' equation
 X_e[i-2:] = odeint(get_peebles, X_e[i-2], x_rec[i-2:])[:,0]
 
@@ -242,9 +240,10 @@ tck_g	  = splrep(x_rec, g)
 	
 stop = time.time()
 
-print "Runtime: %g seconds." % (stop - start)
-
 if __name__ == "__main__":
+
+	print "Change to Peebles' equation at z = %g" % (1./np.exp(x_rec[i-2]) - 1)
+	print "Runtime: %g seconds." % (stop - start)
 	
 	# Testing splined functions
 	X_e_test	= get_n_e(x_rec) / get_n_p(x_rec)
