@@ -16,6 +16,10 @@ recombination history of the universe. We calculate the free electron fraction,
 the optical depth and visibility function as functions of time.
 ***
 #### Milestone III: The evolution of structures in the universe
+##### In progress
+Here we solve the linearized Einstein and Boltzmann equations for photons,
+baryons and dark matter in order to compute the evolution of structures in our
+universe.
 ***
 #### Milestone IV: The CMB power spectrum
 ***
