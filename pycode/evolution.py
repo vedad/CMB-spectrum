@@ -7,20 +7,94 @@ Author: Vedad Hodzic
 E-mail:	vedad.hodzic@astro.uio.no
 """
 
-import numpy as np							  # Functions, mathematical operators
-import matplotlib.pyplot as plt				  # Plotting
-from scipy.integrate import odeint			  # ODE solver
-from scipy.interpolate import splrep, splev	  # Spline interpolation
-import time									  # Time module for runtime
-import params								  # Module for physical constants and parameters
-from CMBSpectrum import n_t, get_H_scaled
+import numpy as np											# Functions, mathematical operators
+import matplotlib.pyplot as plt								# Plotting
+from scipy.integrate import odeint							# ODE solver
+from scipy.interpolate import splrep, splev					# Spline interpolation
+import time													# Time module for runtime
+from params import c, H_0, Omega_b, Omega_r, Omega_m		# Module for physical constants and parameters
+from CMBSpectrum import n_t, x_end_rec, get_H_scaled
 from recombination import get_dtau
+
+#def theta_0_rhs(theta_0, x, k):
+#	return -c * k * theta_1 / get_H_scaled(x)
+
+def system_rhs(y, x, k):
+	
+	# The parameters we are solving for
+	_Theta_0		= y[0]
+	_Theta_1		= y[1]
+	_Theta_2		= y[2]
+	_Theta_3		= y[3]
+	_Theta_4		= y[4]
+	_Theta_5		= y[5]
+	_Theta_6		= y[6]
+	_delta			= y[5]
+	_v				= y[6]
+	_delta_b		= y[7]
+	_v_b			= y[8]
+	_Phi			= y[9]
+
+	# Declare some frequently used parameters
+	a	  = np.exp(x)
+	H_p	  = get_H_scaled(x)
+	dtau  = get_dtau(x)
+	eta	  = get_eta(x)
+	R	  = 4 * Omega_r / (3 * Omega_b * a)
+	_Psi  = -_Phi - 12 * H_0 * H_0 * Omega_r * _Theta_2 /\
+			(c * c * k * k * a * a)
+
+	# The right-hand sides of the Einstein-Boltzmann equations
+	Phi_rhs		  = _Psi - c * c * k * k * _Phi / (3 * H_p * H_p) +\
+					H_0 * H_0 / (2 * H_p * H_p) * (Omega_m * _delta / a +\
+					Omega_b * _delta_b / a + 4 * Omega_r * _Theta_0 / (a * a))
+	Theta_0_rhs	  = - c * k * _Theta_1 / H_p - Phi_rhs
+	Theta_1_rhs	  = c * k / (3 * H_p) * (_Theta_0 - 2 * _Theta_2 + _Psi) +\
+					dtau * (_Theta_1 + _v_b / 3.0)
+	Theta_2_rhs	  = c * k / (5 * H_p) * (2 * _Theta_1 - 3 * _Theta3) +\
+					0.9 * dtau * _Theta_2
+	Theta_4_rhs	  = c * k / (7 * H_p) * (3 * _Theta_2 - 4 * _Theta_4) +\
+					dtau * _Theta3
+	Theta_4_rhs	  = c * k / (9 * H_p) * (4 * _Theta_3 - 5 * _Theta_5) +\
+					dtau * _Theta_4
+	Theta_5_rhs	  = c * k / (11 * H_p) * (5 * _Theta_4 - 6 * _Theta_6) +\
+					dtau * _Theta_5
+	Theta_6_rhs	  = c * k * _Theta_5 / H_p - 7 * c * _Theta_6 / (H_p * eta) +\
+					dtau * _Theta_6
+	delta_rhs	  = c * k * _v / H_p - 3 * 
+
+					
+
+def get_tight_coupling_time(k):
+	"""
+	Computes the time at which tight coupling ends.
+	-----------------------------------------------
+	k		  : float
+	returns	  :	float
+	-----------------------------------------------
+	"""
+	x = np.linspace(x_init, x_end_rec, 1000)
+	test1 = abs(get_dtau(x))
+	test2 = abs(c * k / (get_H_scaled(x) * get_dtau(x)))
+#	test = abs(k / (get_H_scaled(x) * get_dtau(x)))
+	print x[np.where(test1 < 10)]
+#	print x[np.where(test2 > 0.1)] 
+#	return x[np.where(test < 10)]
+#	print x
+#	for i in xrange(len(x)):
+#		print abs(k / (get_H_scaled(x[i]) * get_dtau(x[i])))
+#		if abs(k / (get_H_scaled(x[i]) * get_dtau(x[i]))) < 0.1:
+#			return x[i]
+
+#	x = (x_end_rec - x_init) / 2.
+#	while n < N:
+#		test = abs(c * k / (get_H_scaled(x)
 
 # Accuracy parameters
 a_init	  = 1e-8
 x_init	  =	np.log(a_init)
-k_min	  = 0.1 * params.H_0 / params.c
-k_max	  = 1e3 * params.H_0 / params.c
+k_min	  = 0.1 * H_0 / c
+k_max	  = 1e3 * H_0 / c
 n_k		  = 100
 lmax_int  =	6
 ks		  = np.zeros(n_k)
@@ -45,16 +119,17 @@ delta[0,:]	  = 1.5 * Phi[0,:]
 delta_b[0,:]  = delta[0,:]
 
 for i in xrange(n_k):
-	v[0,i]		  =	params.c * ks[i] * Phi[0,i] / (2 * get_H_scaled(x_init))
+	v[0,i]		  =	c * ks[i] * Phi[0,i] / (2 * get_H_scaled(x_init))
 	v_b[0,i]	  = v[0,i]
 	Theta[0,0,i]  = 0.5 * Phi[0,i]
-	Theta[0,1,i]  = -params.c * ks[i] * Phi[0,i] / (6 * get_H_scaled(x_init))
-	Theta[0,2,i]  =	-20 * params.c * ks[i] * Theta[0,1,i] / (45 *\
+	Theta[0,1,i]  = -c * ks[i] * Phi[0,i] / (6 * get_H_scaled(x_init))
+	Theta[0,2,i]  =	-20 * c * ks[i] * Theta[0,1,i] / (45 *\
 					get_H_scaled(x_init) * get_dtau(x_init))
 	for l in xrange(3, lmax_int+1):
-		Theta[0,l,i]  = -l/(2*l + 1) * params.c * ks[i] * Theta[0,l-1,i] /\
+		Theta[0,l,i]  = -l/(2*l + 1) * c * ks[i] * Theta[0,l-1,i] /\
 						(get_H_scaled(x_init) * get_dtau(x_init))
 
+print get_tight_coupling_time(68)
 ### Ask HK if values make sense
 """
 print "v[0,:]: ", v[0,:]
@@ -68,6 +143,7 @@ print "Theta[0,5,:] ", Theta[0,5,:]
 print "Theta[0,6,:] ", Theta[0,6,:]
 """
 
+"""
 hmin			  = 0.0
 y_tight_coupling  = np.zeros(7)
 
@@ -85,6 +161,7 @@ for k in xrange(n_k):
 	y_tight_coupling[6]	= Theta[0,1,k]
 
 	x_tc = get_tight_coupling_time(k_current)
+
 
 
   subroutine integrate_perturbation_eqns
@@ -164,4 +241,4 @@ for k in xrange(n_k):
     deallocate(dydx)
 
   end subroutine integrate_perturbation_eqns
-
+"""
