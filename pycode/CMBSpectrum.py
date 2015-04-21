@@ -49,7 +49,7 @@ def get_dH_scaled(x):
 	"""
 	a = np.exp(x)
 
-	return H_0 * (-(params.Omega_b + params.Omega_m) / a -\
+	return params.H_0 * (-(params.Omega_b + params.Omega_m) / a -\
 			2 * params.Omega_r / (a * a) + 2 * params.Omega_lambda * a * a) /\
 			(2 * np.sqrt((params.Omega_b + params.Omega_m) / a +\
 			params.Omega_r / (a * a) + params.Omega_lambda * a * a))
