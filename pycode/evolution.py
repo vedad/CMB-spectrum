@@ -9,15 +9,14 @@ E-mail:	vedad.hodzic@astro.uio.no
 
 import numpy as np											# Functions, mathematical operators
 import matplotlib.pyplot as plt								# Plotting
+import numba
 from scipy.integrate import odeint							# ODE solver
 from scipy.interpolate import splrep, splev					# Spline interpolation
 import time													# Time module for runtime
 from params import c, H_0, Omega_b, Omega_r, Omega_m		# Module for physical constants and parameters
-from CMBSpectrum import n_t, x_end_rec, get_H_scaled
-from recombination import get_dtau
-
-#def theta_0_rhs(theta_0, x, k):
-#	return -c * k * theta_1 / get_H_scaled(x)
+from CMBSpectrum import n_t, x_start_rec					# Import variables
+from CMBSpectrum import get_H_scaled, get_dH_scaled, get_eta, write2file			# Import 
+from recombination import get_dtau, get_ddtau
 
 def system_rhs(y, x, k):
 	
@@ -41,7 +40,7 @@ def system_rhs(y, x, k):
 	dtau  = get_dtau(x)
 	eta	  = get_eta(x)
 	R	  = 4 * Omega_r / (3 * Omega_b * a)
-	_Psi  = -_Phi - 12 * H_0 * H_0 * Omega_r * _Theta_2 /\
+	_Psi  = - _Phi - 12 * H_0 * H_0 * Omega_r * _Theta_2 /\
 			(c * c * k * k * a * a)
 
 	# The right-hand sides of the Einstein-Boltzmann equations
@@ -61,9 +60,66 @@ def system_rhs(y, x, k):
 					dtau * _Theta_5
 	Theta_6_rhs	  = c * k * _Theta_5 / H_p - 7 * c * _Theta_6 / (H_p * eta) +\
 					dtau * _Theta_6
-	delta_rhs	  = c * k * _v / H_p - 3 * 
+	delta_rhs	  = c * k * _v / H_p - 3 * Phi_rhs
+	v_rhs		  = - _v - c * k * _Psi / H_p
+	delta_b_rhs	  = c * k * _v_b / H_p - 3 * Phi_rhs
+	v_b_rhs		  = - _v_b - c * k * _Psi / H_p +\
+					dtau * R * (3 * _Theta_1 + _v_b)
 
-					
+	return [delta_rhs, delta_b_rhs, v_rhs, v_b_rhs, Phi_rhs, Theta_0_rhs,\
+			Theta_1_rhs, Theta_2_rhs, Theta_3_rhs, Theta_4_rhs, Theta_5_rhs,\
+			Theta_6_rhs]
+
+@numba.jit
+def system_rhs_tc(y, x, k):
+
+	# The parameters we are solving for
+	_Theta_0		= y[0]
+	_Theta_1		= y[1]
+	_delta			= y[2]
+	_v				= y[3]
+	_delta_b		= y[4]
+	_v_b			= y[5]
+	_Phi			= y[6]
+
+	# Declare some frequently used parameters
+	a	  = np.exp(x)
+	H_p	  = get_H_scaled(x)
+	dH_p  = get_dH_scaled(x)
+	dtau  = get_dtau(x)
+	ddtau = get_ddtau(x)
+	eta	  = get_eta(x)
+	R	  = 4 * Omega_r / (3 * Omega_b * a)
+	Theta_2	= - 20 * c * k * _Theta_1 / (45 * H_p * dtau)
+	Theta_3 = - 3 * c * k * Theta_2 / (7 * H_p * dtau)
+	Theta_4 = - 4 * c * k * Theta_3 / (9 * H_p * dtau)
+	Theta_5 = - 5 * c * k * Theta_4 / (11 * H_p * dtau)
+	Theta_6	= - 6 * c * k * Theta_5 / (13 * H_p * dtau)
+	_Psi	= - _Phi - 12 * H_0 * H_0 * Omega_r * Theta_2 /\
+				(c * c * k * k * a * a)
+				
+
+	# The right-hand sides of the Einstein-Boltzmann equations
+	Phi_rhs		  = _Psi - c * c * k * k * _Phi / (3 * H_p * H_p) +\
+					H_0 * H_0 / (2 * H_p * H_p) * (Omega_m * _delta / a +\
+					Omega_b * _delta_b / a + 4 * Omega_r * _Theta_0 / (a * a))
+	Theta_0_rhs	  = - c * k * _Theta_1 / H_p - Phi_rhs
+	q			  = -(((1 - 2 * R) * dtau + (1 + R) * ddtau) *\
+					(3 * _Theta_1 + _v_b) - c * k * _Psi / H_p +\
+					(1 - dH_p/H_p) * c * k / H_p * (- _Theta_0 + 2 * Theta_2) -\
+					c * k * Theta_0_rhs / H_p) /\
+					((1 + R) * dtau + dH_p / H_p - 1)
+	v_b_rhs		  = 1 / (1 + R) * (- _v_b - c * k * _Psi / H_p +\
+					R * (q + c * k / H_p * (- _Theta_0 + 2 * Theta_2) -\
+					c * k * _Psi / H_p))
+	Theta_1_rhs	  = (q - v_b_rhs) / 3.0
+	delta_rhs	  = c * k * _v / H_p - 3 * Phi_rhs
+	v_rhs		  = - _v - c * k * _Psi / H_p
+	delta_b_rhs	  = c * k * _v_b / H_p - 3 * Phi_rhs
+
+	return [delta_rhs, delta_b_rhs, v_rhs, v_b_rhs, Phi_rhs, Theta_0_rhs,\
+			Theta_1_rhs]
+
 
 def get_tight_coupling_time(k):
 	"""
@@ -73,22 +129,25 @@ def get_tight_coupling_time(k):
 	returns	  :	float
 	-----------------------------------------------
 	"""
-	x = np.linspace(x_init, x_end_rec, 1000)
-	test1 = abs(get_dtau(x))
-	test2 = abs(c * k / (get_H_scaled(x) * get_dtau(x)))
-#	test = abs(k / (get_H_scaled(x) * get_dtau(x)))
-	print x[np.where(test1 < 10)]
-#	print x[np.where(test2 > 0.1)] 
-#	return x[np.where(test < 10)]
-#	print x
-#	for i in xrange(len(x)):
-#		print abs(k / (get_H_scaled(x[i]) * get_dtau(x[i])))
-#		if abs(k / (get_H_scaled(x[i]) * get_dtau(x[i]))) < 0.1:
-#			return x[i]
+	# Start with x_init and add a dx instead.
+	dx	  = 0.01
+	x	  = x_init
 
-#	x = (x_end_rec - x_init) / 2.
-#	while n < N:
-#		test = abs(c * k / (get_H_scaled(x)
+	tight_coupling	= True
+
+	while tight_coupling:
+		if abs(c * k / (get_H_scaled(x) * get_dtau(x))) > 0.1:
+			print "First test."
+			return x
+		elif abs(get_dtau(x)) < 10:
+			print "Second test."
+			return x
+		elif x >= x_start_rec:
+			print "Third test."
+			return x
+		x += dx
+
+start = time.time()
 
 # Accuracy parameters
 a_init	  = 1e-8
@@ -129,7 +188,7 @@ for i in xrange(n_k):
 		Theta[0,l,i]  = -l/(2*l + 1) * c * ks[i] * Theta[0,l-1,i] /\
 						(get_H_scaled(x_init) * get_dtau(x_init))
 
-print get_tight_coupling_time(68)
+#print get_tight_coupling_time(ks[-1])
 ### Ask HK if values make sense
 """
 print "v[0,:]: ", v[0,:]
@@ -143,13 +202,13 @@ print "Theta[0,5,:] ", Theta[0,5,:]
 print "Theta[0,6,:] ", Theta[0,6,:]
 """
 
-"""
 hmin			  = 0.0
 y_tight_coupling  = np.zeros(7)
+x_grid			  = np.linspace(x_init, 0, n_t+1)
 
 for k in xrange(n_k):
 
-	k_current = ks(k)
+	k_current = ks[k]
 	h1		  =	1e-5
 
 	y_tight_coupling[0]	= delta[0,k]
@@ -161,9 +220,37 @@ for k in xrange(n_k):
 	y_tight_coupling[6]	= Theta[0,1,k]
 
 	x_tc = get_tight_coupling_time(k_current)
+	tc_end = np.where(x_grid > x_tc)[0][0]	# Index of TC end
 
+	system_soln = odeint(system_rhs_tc, y_tight_coupling, x_grid[:tc_end],\
+			args=(k_current,))
+#	delta[:,k] = system_soln[
+	delta[:tc_end, k]	  = system_soln[:,0]
+	delta_b[:tc_end, k]	  = system_soln[:,1]
+	v[:tc_end, k]		  = system_soln[:,2]
+	v_b[:tc_end, k]		  = system_soln[:,3]
+	Phi[:tc_end, k]		  = system_soln[:,4]
+	Theta[:tc_end, 0, k]  = system_soln[:,5]
+	Theta[:tc_end, 1, k]  = system_soln[:,6]
 
+	print k
 
+end = time.time()
+
+if __name__ == "__main__":
+
+	print "Runtime: %g seconds." % (end - start)
+
+	for k in xrange(len(ks)):
+		write2file("../results/milestone3/delta_" + str(k) + ".txt",\
+				"Data for CDM density for one mode of k: x delta", x_grid,
+				delta[:,k])
+
+		write2file("../results/milestone3/Phi_" + str(k) + ".tx",\
+				"Data for gravitational curvature potential for one mode of k:\
+				 x Phi", x_grid, Phi[:,k])
+
+"""
   subroutine integrate_perturbation_eqns
     implicit none
 
