@@ -18,15 +18,6 @@ from CMBSpectrum import n_t, x_start_rec, x_t				# Import variables
 from CMBSpectrum import get_H_scaled, get_dH_scaled, get_eta, write2file			# Import 
 from recombination import get_dtau, get_ddtau
 
-#x_init = np.log(1e-8)
-#x_t		  = np.linspace(x_init, 0, n_t) # Grid for plotting through TC
-#_a	  = np.exp(x_t)
-#_H_p	  = get_H_scaled(x_t)
-#_dtau  = get_dtau(x_t)
-#_eta	  = get_eta(x_t)
-#_dH_p  = get_dH_scaled(x_t)
-#_ddtau = get_ddtau(x_t)
-
 #@jit(nopython=True)
 def system_rhs(y, x, k):
 	
@@ -203,10 +194,10 @@ def get_tight_coupling_time(k):
 			return x_start_rec
 		elif abs(c * k / (get_H_scaled(x) * get_dtau(x))) > 0.1:
 			print "First test."
-			return x-dx# - dx
+			return x# - dx
 		elif abs(get_dtau(x)) < 10:
 			print "Second test."
-			return x-dx# - dx
+			return x# - dx
 #			return x - dx
 		x += dx
 
@@ -292,8 +283,8 @@ for k in xrange(n_k):
 
 	x_tc_end = get_tight_coupling_time(k_current)
 #	x_tc_end = get_tight_coupling_time(k_current)
-	print x_tc_end
-	print x_start_rec
+#	print x_tc_end
+#	print x_start_rec
 #	print x_tc
 #	X[:,k]	  = np.linspace(x_init, x_tc_end, n_t)
 #	x_tc_grid = np.linspace(x_init, x_tc, n_t)
@@ -302,7 +293,7 @@ for k in xrange(n_k):
 #	print X[:,k]
 	tc_end = np.where(x_tc >= x_tc_end)[0][0]	# Index of TC end
 #	tc_end += 1
-	print tc_end
+#	print tc_end
 
 	# Solve Einstein-Boltzmann equations for tight coupling regime
 #	y_tight_coupling = odeint(system_rhs_tc, y_tight_coupling0, X[:,k],\
@@ -328,7 +319,7 @@ for k in xrange(n_k):
 #	v_tc[:,k], v_b_tc[:,k], Phi_tc[:,k],\
 #	Theta_tc[:,0,k], Theta_tc[:,1,k] = Y_tc
 
-	print Phi_tc[:,k]
+#	print Phi_tc[:,k]
 	for l in xrange(2,lmax_int+1):
 		Theta_tc[:tc_end+1,l,k] = - l / (2.0*l + 1) * c * k_current *\
 					Theta_tc[:tc_end+1,l-1,k] / (get_H_scaled(x_tc[:tc_end+1]) *\
@@ -342,8 +333,13 @@ for k in xrange(n_k):
 
 #	Psi_tc[:,k]			  = get_Psi(k_current, X[:,k], Theta_tc[:,2,k],\
 #							Phi_tc[:,k])
-	Psi_tc[:tc_end+1,k]	  = get_Psi(k_current, x_tc[:tc_end+1],\
-							Theta_tc[:tc_end+1,2,k], Phi_tc[:tc_end+1,k])
+#	Psi_tc[:tc_end+1,k]	  = get_Psi(k_current, x_tc[:tc_end+1],\
+#							Theta_tc[:tc_end+1,2,k], Phi_tc[:tc_end+1,k])
+	Psi_tc[:tc_end+1,k] = - Phi_tc[:tc_end+1,k] - 12 * H_0 * H_0 * Omega_r *\
+							Theta_tc[:tc_end+1,2,k] /\
+							(c * c * k_current * k_current *\
+							np.exp(2*x_tc[:tc_end+1]))
+
 #	Psi_tc[:,k]			  = - Phi_tc[:,k] - 12 * H_0 * H_0 * Omega_r *\
 #							Theta_tc[:,2,k] / (c * c * k_current * k_current *\
 #							np.exp(X[:,k]) * np.exp(X[:,k]))
@@ -361,15 +357,15 @@ for k in xrange(n_k):
 
 	# Initial values
 	
-	if x_tc_end < x_start_rec:
+	if x_tc_end is not x_start_rec:
 #		print X[:,k]
 #	if x_tc_end is not x_start_rec:
 #	if x_tc[tc_end,k] is not x_start_rec:
-		y_mid0 = delta_tc[tc_end-1,k], delta_b_tc[tc_end-1,k],\
-			v_tc[tc_end-1,k], v_b_tc[tc_end-1,k], Phi_tc[tc_end-1,k],\
-			Theta_tc[tc_end-1,0,k], Theta_tc[tc_end-1,1,k], Theta_tc[tc_end-1,2,k],\
-			Theta_tc[tc_end-1,3,k], Theta_tc[tc_end-1,4,k], Theta_tc[tc_end-1,5,k],\
-			Theta_tc[tc_end-1,6,k]#, Psi_tc[-1,k]#, Theta
+		y_mid0 = delta_tc[tc_end,k], delta_b_tc[tc_end,k],\
+			v_tc[tc_end,k], v_b_tc[tc_end,k], Phi_tc[tc_end,k],\
+			Theta_tc[tc_end,0,k], Theta_tc[tc_end,1,k], Theta_tc[tc_end,2,k],\
+			Theta_tc[tc_end,3,k], Theta_tc[tc_end,4,k], Theta_tc[tc_end,5,k],\
+			Theta_tc[tc_end,6,k]#, Psi_tc[-1,k]#, Theta
 #		print y_mid0
 #		y_mid0 = delta_tc[-1,k], delta_b_tc[-1,k],\
 #			v_tc[-1,k], v_b_tc[-1,k],\
@@ -381,7 +377,7 @@ for k in xrange(n_k):
 
 #		y_mid = odeint(system_rhs, y_mid0, [X[-1,k], x_t[0]],\
 #				args=(k_current,))
-		y_mid = odeint(system_rhs, y_mid0, x_tc[tc_end-1:], args=(k_current,))
+		y_mid = odeint(system_rhs, y_mid0, x_tc[tc_end:], args=(k_current,))
 			
 		Y_mid = [y_mid[:,0], y_mid[:,1], y_mid[:,2],\
 				y_mid[:,3], y_mid[:,4], y_mid[:,5],\
@@ -400,16 +396,16 @@ for k in xrange(n_k):
 #		print y0
 #		print y0
 	
-		delta_tc[tc_end-1:,k], delta_b_tc[tc_end-1:,k],\
-				v_tc[tc_end-1:,k], v_b_tc[tc_end-1:,k],\
-				Phi_tc[tc_end-1:,k], Theta_tc[tc_end-1:,0,k],\
-				Theta_tc[tc_end-1:,1,k], Theta_tc[tc_end-1:,2,k],\
-				Theta_tc[tc_end-1:,3,k], Theta_tc[tc_end-1:,4,k],\
-				Theta_tc[tc_end-1:,5,k], Theta_tc[tc_end-1:,6,k] = Y_mid
+		delta_tc[tc_end:,k], delta_b_tc[tc_end:,k],\
+				v_tc[tc_end:,k], v_b_tc[tc_end:,k],\
+				Phi_tc[tc_end:,k], Theta_tc[tc_end:,0,k],\
+				Theta_tc[tc_end:,1,k], Theta_tc[tc_end:,2,k],\
+				Theta_tc[tc_end:,3,k], Theta_tc[tc_end:,4,k],\
+				Theta_tc[tc_end:,5,k], Theta_tc[tc_end:,6,k] = Y_mid
 
-		Psi_tc[tc_end-1:,k] = get_Psi(k_current, x_tc[tc_end-1:],\
-								Theta_tc[tc_end-1:,2,k],\
-								Phi_tc[tc_end-1:,k])
+		Psi_tc[tc_end:,k] = get_Psi(k_current, x_tc[tc_end:],\
+								Theta_tc[tc_end:,2,k],\
+								Phi_tc[tc_end:,k])
 
 		y0 = delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
 				Phi_tc[-1,k], Theta_tc[-1,0,k], Theta_tc[-1,1,k],\
@@ -453,10 +449,22 @@ for k in xrange(n_k):
 	Phi[:,k], Theta[:,0,k], Theta[:,1,k], Theta[:,2,k],\
 	Theta[:,3,k], Theta[:,4,k], Theta[:,5,k], Theta[:,6,k] = Y
 
-	Psi[:,k] = get_Psi(k_current, x_t, Theta[:,2,k], Phi[:,k])
+#	Psi[:,k] = get_Psi(k_current, x_t, Theta[:,2,k], Phi[:,k])
+	Psi[:,k] = - Phi[:,k] - 12 * H_0 * H_0 * Omega_r * Theta[:,2,k] /\
+				(c * c * k_current * k_current * np.exp(2*x_t))
+
 #	print Phi[:,k]
 				
 #	Psi[:,k] = - Phi[:,k] - 12 * H_0 * H_0 * 
+
+	dv_b[:,k] = system_rhs(Y, x_t, k_current)[3]
+	dPhi[:,k] = system_rhs(Y, x_t, k_current)[4]
+	dTheta[:,0,k], dTheta[:,1,k],\
+	dTheta[:,2,k], dTheta[:,3,k],\
+	dTheta[:,4,k], dTheta[:,5,k],\
+	dTheta[:,6,k] = system_rhs(Y, x_t, k_current)[5:12]
+	dPsi[:,k] = - dPhi[:,k] - 12 * H_0 * H_0 * Omega_r * (dTheta[:,2,k] - 2*\
+				Theta[:,2,k]) / (c * c * k_current * k_current * np.exp(2*x_t))
 
 	# Store derivatives
 #	dPhi[tc_end-1:,k]		  = system_rhs(Y, x_t[tc_end-1:],\
@@ -478,10 +486,10 @@ if __name__ == "__main__":
 	print "Runtime: %g seconds." % (end - start)
 	start_write = time.time()
 	
-	print delta_tc[:,0]
-	print delta[:,0]
+#	print delta_tc[:,0]
+#	print delta[:,0]
 	delta_full		= np.concatenate((delta_tc, delta), axis=0)
-	print delta_full[:,0]
+#	print delta_full[:,0]
 	delta_b_full	= np.concatenate((delta_b_tc, delta_b), axis=0)
 	v_full			= np.concatenate((v_tc, v), axis=0)
 	v_b_full		= np.concatenate((v_b_tc, v_b), axis=0)
@@ -495,6 +503,7 @@ if __name__ == "__main__":
 	for k in xrange(n_k):
 #		x = np.concatenate((X[:,k], x_t), axis=0)
 
+		# Write solutions to files
 		write2file("../data/milestone3/delta/delta_" + str(k) + ".txt",\
 				"Data for CDM overdensity for one mode of k: x delta", x,
 				delta_full[:,k])
@@ -522,6 +531,23 @@ if __name__ == "__main__":
 		write2file("../data/milestone3/Theta0/Theta0_" + str(k) + ".txt",\
 				"Data for Theta_0 for one mode of k: x Theta_0",\
 				x, Theta_full[:,0,k])
+
+		# Write derivatives to files
+		write2file("../data/milestone3/dv_b/dv_b_" + str(k) + ".txt",\
+				"Data for derivatives of baryons for one mode of k: x v_b",\
+				x_t, dv_b[:,k])
+
+		write2file("../data/milestone3/dPhi/dPhi_" + str(k) + ".txt",\
+				"Data for derivative of Phi for one mode of k: x dPhi",\
+				x_t, dPhi[:,k])
+
+		write2file("../data/milestone3/dPsi/dPsi_" + str(k) + ".txt",\
+				"Data for derivative of Psi for one mode of k: x dPsi",\
+				x_t, dPsi[:,k])
+
+		write2file("../data/milestone3/dTheta0/dTheta0_" + str(k) + ".txt",\
+				"Data for derivative of monopole for one mode of k: x dTheta0",\
+				x_t, dTheta[:,0,k])
 
 	end_write = time.time()
 	print "Writing time: %g seconds." % (end_write - start_write)
