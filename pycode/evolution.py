@@ -9,16 +9,15 @@ E-mail:	vedad.hodzic@astro.uio.no
 
 import numpy as np											# Functions, mathematical operators
 import matplotlib.pyplot as plt								# Plotting
-from numba import jit, float64
 from scipy.integrate import odeint							# ODE solver
 from scipy.interpolate import splrep, splev					# Spline interpolation
 import time													# Time module for runtime
 from params import c, H_0, Omega_b, Omega_r, Omega_m		# Module for physical constants and parameters
 from CMBSpectrum import n_t, x_start_rec, x_t				# Import variables
-from CMBSpectrum import get_H_scaled, get_dH_scaled, get_eta, write2file			# Import 
-from recombination import get_dtau, get_ddtau
+from CMBSpectrum import get_H_scaled, get_dH_scaled,\
+						get_eta, write2file					# Import functions
+from recombination import get_dtau, get_ddtau				# Import functions
 
-#@jit(nopython=True)
 def system_rhs(y, x, k):
 	
 	# The parameters we are solving for
@@ -34,12 +33,8 @@ def system_rhs(y, x, k):
 	_Theta_4		= y[9]
 	_Theta_5		= y[10]
 	_Theta_6		= y[11]
-#	_Psi			= y[12]
 
 	# Declare some frequently used parameters
-#	a	  = _a[:t]c_end]
-#	H_p	  = _H_p[:tc_end]
-#	dtau  = _dtau[:tc_end]
 	a	  = np.exp(x)
 	H_p	  = get_H_scaled(x)
 	dtau  = get_dtau(x)
@@ -75,7 +70,6 @@ def system_rhs(y, x, k):
 			Theta_1_rhs, Theta_2_rhs, Theta_3_rhs, Theta_4_rhs, Theta_5_rhs,\
 			Theta_6_rhs]#, _Psi]
 
-#@jit
 def system_rhs_tc(y, x, k):
 
 	# The parameters we are solving for
@@ -88,12 +82,6 @@ def system_rhs_tc(y, x, k):
 	_Theta_1		= y[6]
 
 	# Declare some frequently used parameters
-#	a	  = _a[:tc_end]
-#	H_p	  = _H_p[:tc_end]
-#	eta	  = _eta[:tc_end]
-#	dtau  = _dtau[:tc_end]
-#	ddtau = _ddtau[:tc_end]
-#	dH_p  = _dH_p[:tc_end]
 	a	  = np.exp(x)
 	H_p	  = get_H_scaled(x)
 	eta	  = get_eta(x)
@@ -109,7 +97,6 @@ def system_rhs_tc(y, x, k):
 	_Psi	= - _Phi - 12 * H_0 * H_0 * Omega_r * Theta_2 /\
 				(c * c * k * k * a * a)
 				
-
 	# The right-hand sides of the Einstein-Boltzmann equations
 	Phi_rhs		  = _Psi - c * c * k * k * _Phi / (3 * H_p * H_p) +\
 					H_0 * H_0 / (2 * H_p * H_p) * (Omega_m * _delta / a +\
@@ -131,49 +118,6 @@ def system_rhs_tc(y, x, k):
 	return [delta_rhs, delta_b_rhs, v_rhs, v_b_rhs, Phi_rhs, Theta_0_rhs,\
 			Theta_1_rhs]
 
-def get_Theta_2_tc(k, x, Theta_1):
-	H_p	  = get_H_scaled(x)
-	dtau  = get_dtau(x)
-
-	return - 20 * c * k * Theta_1 / (45 * H_p * dtau)
-
-def get_Theta_3_tc(k, x, Theta_2):
-	H_p	  = get_H_scaled(x)
-	dtau  = get_dtau(x)
-
-	return - 3 * c * k * Theta_2 / (7 * H_p * dtau)
-
-def get_Theta_4_tc(k, x, Theta_3):
-	H_p	  = get_H_scaled(x)
-	dtau  = get_dtau(x)
-
-	return - 4 * c * k * Theta_3 / (9 * H_p * dtau)
-
-def get_Theta_5_tc(k, x, Theta_4):
-	H_p	  = get_H_scaled(x)
-	dtau  = get_dtau(x)
-
-	return - 5 * c * k * Theta_4 / (11 * H_p * dtau)
-
-def get_Theta_6_tc(k, x, Theta_5):
-	H_p	  = get_H_scaled(x)
-	dtau  = get_dtau(x)
-
-	return - 6 * c * k * Theta_5 / (13 * H_p * dtau)
-
-def get_Psi(k, x, Theta_2, Phi):
-	a = np.exp(x)
-
-	return - Phi - 12 * H_0 * H_0 * Omega_r * Theta_2 /\
-				(c * c * k * k * a * a)
-
-def get_dPsi(k, x, dTheta_2, dPhi):
-	a = np.exp(x)
-
-	return - dPhi - 12 * H_0 * H_0 * Omega_r * dTheta_2 /\
-				(c * c * k * k * a * a)
-
-
 def get_tight_coupling_time(k):
 	"""
 	Computes the time at which tight coupling ends.
@@ -194,16 +138,15 @@ def get_tight_coupling_time(k):
 			return x_start_rec
 		elif abs(c * k / (get_H_scaled(x) * get_dtau(x))) > 0.1:
 			print "First test."
-			return x# - dx
+			return x
 		elif abs(get_dtau(x)) < 10:
 			print "Second test."
-			return x# - dx
-#			return x - dx
+			return x
 		x += dx
 
 start = time.time()
 
-### Parameters
+# Parameters
 a_init	  = 1e-8
 x_init	  =	np.log(a_init)
 k_min	  = 0.1 * H_0 / c
@@ -211,44 +154,23 @@ k_max	  = 1e3 * H_0 / c
 n_k		  = 101
 lmax_int  =	6
 ks		  = np.zeros(n_k)
-#x_tc	  = np.linspace(x_init, , n_t) # Grid for plotting through TC
-#x_full	  = np.concatenate((x_tc,x_t), axis=0)
 
-#a	  = np.exp(x_t)
-#H_p	  = get_H_scaled(x_t)
-#dtau  = get_dtau(x_t)
-#eta	  = get_eta(x_t)
-#dH_p  = get_dH_scaled(x_t)
-#ddtau = get_ddtau(x_t)
-
-
-### Values of k
+# Values of k
 for i in xrange(n_k):
 	ks[i]  = k_min + (k_max - k_min)*(i/float(n_k-1))**2.
 
-### Initialize arrays (try this new method instead of repeating stuff)
+# Initialize arrays (names with _tc are for plotting tight coupling regime)
 delta, delta_b, v, v_b, Phi,\
-	Psi, dPhi, dPsi, dv_b		  = np.zeros((9,n_t,n_k))
+Psi, dPhi, dPsi, dv_b			= np.zeros((9,n_t,n_k))
+
 delta_tc, delta_b_tc, v_tc,\
-v_b_tc, Phi_tc, Psi_tc			  = np.zeros((6,n_t,n_k))
-Theta_tc						  = np.zeros((n_t, lmax_int+1, n_k))
-Theta, dTheta					  = np.zeros((2, n_t, lmax_int+1, n_k))
-x_tc							  = np.linspace(x_init, x_start_rec, n_t)
-#X								  = np.zeros((n_t, n_k))
+v_b_tc, Phi_tc, Psi_tc			= np.zeros((6,n_t,n_k))
 
-#Theta	= np.zeros((n_t, lmax_int+1, n_k))
-#delta	= np.zeros((n_t, n_k))
-#delta_b	= np.zeros((n_t, n_k))
-#v		= np.zeros((n_t, n_k))
-#v_b		= np.zeros((n_t, n_k))
-#Phi		= np.zeros((n_t, n_k))
-#Psi		= np.zeros((n_t, n_k))
-#dPhi	= np.zeros((n_t, n_k))
-#dPsi	= np.zeros((n_t, n_k))
-#dv_b	= np.zeros((n_t, n_k))
-#dTheta	= np.zeros((n_t, lmax_int+1, n_k))
+Theta_tc						= np.zeros((n_t, lmax_int+1, n_k))
+Theta, dTheta					= np.zeros((2, n_t, lmax_int+1, n_k))
+x_tc							= np.linspace(x_init, x_start_rec, n_t)
 
-### Initial conditions
+# Initial conditions
 Phi[0,:]	  = 1.
 delta[0,:]	  = 1.5 * Phi[0,:]
 delta_b[0,:]  = delta[0,:]
@@ -265,12 +187,10 @@ Psi[0,:]	  = - Phi[0,:] - 12 * H_0 * H_0 * Omega_r * Theta[0,2,:] /\
 				(c * c * ks * ks * a_init * a_init)
 
 
-y_tight_coupling_0	= np.zeros(7)
-y_tight_coupling	= np.zeros(7)
-y0					= np.zeros(12)	
-y					= np.zeros(12)
+# For holding the solutions of ODE system
+y_tight_coupling_0, y_tight_coupling  = np.zeros((2,7))
+ymid0, ymid, y0, y					  = np.zeros((4,12))
 
-#print x_t
 for k in xrange(n_k):
 	print k
 	k_current = ks[k]
@@ -281,24 +201,11 @@ for k in xrange(n_k):
 	y_tight_coupling0 = delta[0,k], delta_b[0,k], v[0,k], v_b[0,k],\
 							Phi[0,k], Theta[0,0,k], Theta[0,1,k]
 
+	# Find when tight coupling ends and the index
 	x_tc_end = get_tight_coupling_time(k_current)
-#	x_tc_end = get_tight_coupling_time(k_current)
-#	print x_tc_end
-#	print x_start_rec
-#	print x_tc
-#	X[:,k]	  = np.linspace(x_init, x_tc_end, n_t)
-#	x_tc_grid = np.linspace(x_init, x_tc, n_t)
-#	x_full	  = np.concatenate((x_tc_grid, x_t), axis=0)
-#	print x_tc
-#	print X[:,k]
-	tc_end = np.where(x_tc >= x_tc_end)[0][0]	# Index of TC end
-#	tc_end += 1
-#	print tc_end
+	tc_end = np.where(x_tc >= x_tc_end)[0][0]
 
-	# Solve Einstein-Boltzmann equations for tight coupling regime
-#	y_tight_coupling = odeint(system_rhs_tc, y_tight_coupling0, X[:,k],\
-#						args=(k_current,))
-
+	# Solve ODE system in tight coupling regime
 	y_tight_coupling = odeint(system_rhs_tc, y_tight_coupling0, x_tc[:tc_end+1],\
 						args=(k_current,))
 
@@ -306,157 +213,85 @@ for k in xrange(n_k):
 			y_tight_coupling[:,3], y_tight_coupling[:,4],\
 			y_tight_coupling[:,5], y_tight_coupling[:,6]]
 	
-	# Store solutions in respective arrays
-#	delta[:tc_end,k], delta_b[:tc_end,k],\
-#	v[:tc_end,k], v_b[:tc_end,k], Phi[:tc_end,k],\
-#	Theta[:tc_end,0,k], Theta[:tc_end,1,k] = Y_tc
-
+	# Store solutions
 	delta_tc[:tc_end+1,k], delta_b_tc[:tc_end+1,k],\
-			v_tc[:tc_end+1,k], v_b_tc[:tc_end+1,k], Phi_tc[:tc_end+1,k],\
-			Theta_tc[:tc_end+1,0,k], Theta_tc[:tc_end+1,1,k] = Y_tc
+	v_tc[:tc_end+1,k], v_b_tc[:tc_end+1,k],\
+	Phi_tc[:tc_end+1,k], Theta_tc[:tc_end+1,0,k],\
+	Theta_tc[:tc_end+1,1,k] = Y_tc
 	
-#	delta_tc[:,k], delta_b_tc[:,k],\
-#	v_tc[:,k], v_b_tc[:,k], Phi_tc[:,k],\
-#	Theta_tc[:,0,k], Theta_tc[:,1,k] = Y_tc
-
-#	print Phi_tc[:,k]
 	for l in xrange(2,lmax_int+1):
 		Theta_tc[:tc_end+1,l,k] = - l / (2.0*l + 1) * c * k_current *\
 					Theta_tc[:tc_end+1,l-1,k] / (get_H_scaled(x_tc[:tc_end+1]) *\
 							get_dtau(x_tc[:tc_end+1]))
 
-#	for l in xrange(2,lmax_int+1):
-#		Theta_tc[:,l,k] = - l / (2.0*l + 1) * c * k_current *\
-#							Theta_tc[:,l-1,k] / (get_H_scaled(X[:,k]) *\
-#							get_dtau(X[:,k]))
-
-
-#	Psi_tc[:,k]			  = get_Psi(k_current, X[:,k], Theta_tc[:,2,k],\
-#							Phi_tc[:,k])
-#	Psi_tc[:tc_end+1,k]	  = get_Psi(k_current, x_tc[:tc_end+1],\
-#							Theta_tc[:tc_end+1,2,k], Phi_tc[:tc_end+1,k])
 	Psi_tc[:tc_end+1,k] = - Phi_tc[:tc_end+1,k] - 12 * H_0 * H_0 * Omega_r *\
 							Theta_tc[:tc_end+1,2,k] /\
 							(c * c * k_current * k_current *\
 							np.exp(2*x_tc[:tc_end+1]))
 
-#	Psi_tc[:,k]			  = - Phi_tc[:,k] - 12 * H_0 * H_0 * Omega_r *\
-#							Theta_tc[:,2,k] / (c * c * k_current * k_current *\
-#							np.exp(X[:,k]) * np.exp(X[:,k]))
-
-#	y0 = delta_tc[tc_end-1,k], delta_b_tc[tc_end,k],\
-#			v_tc[tc_end-1,k], v_b_tc[tc_end-1,k],\
-#			Phi_tc[tc_end-1,k], Theta_tc[tc_end-1,0,k],\
-#			Theta_tc[tc_end-1,1,k], Theta_tc[tc_end-1,2,k],\
-#			Theta_tc[tc_end-1,3,k], Theta_tc[tc_end-1,4,k],\
-#			Theta_tc[tc_end-1,5,k], Theta_tc[tc_end-1,6,k]
-
-	
+	# Initial values for x_start_rec if last point in TC grid was x_start_rec
+	y0 =	delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
+			Phi_tc[-1,k], Theta_tc[-1,0,k], Theta_tc[-1,1,k],\
+			Theta_tc[-1,2,k], Theta_tc[-1,3,k], Theta_tc[-1,4,k],\
+			Theta_tc[-1,5,k], Theta_tc[-1,6,k]
 
 	### After tight coupling
 
-	# Initial values
-	
+	# Solve full system for the gap between x_tc_end until x_start_rec
 	if x_tc_end is not x_start_rec:
-#		print X[:,k]
-#	if x_tc_end is not x_start_rec:
-#	if x_tc[tc_end,k] is not x_start_rec:
-		y_mid0 = delta_tc[tc_end,k], delta_b_tc[tc_end,k],\
-			v_tc[tc_end,k], v_b_tc[tc_end,k], Phi_tc[tc_end,k],\
-			Theta_tc[tc_end,0,k], Theta_tc[tc_end,1,k], Theta_tc[tc_end,2,k],\
-			Theta_tc[tc_end,3,k], Theta_tc[tc_end,4,k], Theta_tc[tc_end,5,k],\
-			Theta_tc[tc_end,6,k]#, Psi_tc[-1,k]#, Theta
-#		print y_mid0
-#		y_mid0 = delta_tc[-1,k], delta_b_tc[-1,k],\
-#			v_tc[-1,k], v_b_tc[-1,k],\
-#			Phi_tc[-1,k], Theta_tc[-1,0,k],\
-#			Theta_tc[-1,1,k], Theta_tc[-1,2,k],\
-#			Theta_tc[-1,3,k], Theta_tc[-1,4,k],\
-#			Theta_tc[-1,5,k], Theta_tc[-1,6,k]
-#		print y_mid0
+		# Initial values for gap
+		y_mid0	=	delta_tc[tc_end,k], delta_b_tc[tc_end,k],\
+					v_tc[tc_end,k], v_b_tc[tc_end,k],\
+					Phi_tc[tc_end,k], Theta_tc[tc_end,0,k],\
+					Theta_tc[tc_end,1,k], Theta_tc[tc_end,2,k],\
+					Theta_tc[tc_end,3,k], Theta_tc[tc_end,4,k],\
+					Theta_tc[tc_end,5,k], Theta_tc[tc_end,6,k]
 
-#		y_mid = odeint(system_rhs, y_mid0, [X[-1,k], x_t[0]],\
-#				args=(k_current,))
+
+		# Solve full system in gap
 		y_mid = odeint(system_rhs, y_mid0, x_tc[tc_end:], args=(k_current,))
 			
 		Y_mid = [y_mid[:,0], y_mid[:,1], y_mid[:,2],\
 				y_mid[:,3], y_mid[:,4], y_mid[:,5],\
 				y_mid[:,6], y_mid[:,7], y_mid[:,8],\
 				y_mid[:,9], y_mid[:,10], y_mid[:,11]]
-#		print Y_mid
 
-#		y_test = [y_mid[:,0], y_mid[:,1], y_mid[:,2], y_mid[:,3], y_mid[:,4],\
-#				y_mid[:,5], y_mid[:,6], y_mid[:,7], y_mid[:,8], y_mid[:,9],\
-#				y_mid[:,10], y_mid[:,11]]
-#		print y_test
-
-#		y0 = [y_mid[-1,0], y_mid[-1,1], y_mid[-1,2], y_mid[-1,3], y_mid[-1,4],\
-#			y_mid[-1,5], y_mid[-1,6], y_mid[-1,7], y_mid[-1,8], y_mid[-1,9],\
-#			y_mid[-1,10], y_mid[-1,11]]
-#		print y0
-#		print y0
-	
+		# Store solutions in arrays
 		delta_tc[tc_end:,k], delta_b_tc[tc_end:,k],\
-				v_tc[tc_end:,k], v_b_tc[tc_end:,k],\
-				Phi_tc[tc_end:,k], Theta_tc[tc_end:,0,k],\
-				Theta_tc[tc_end:,1,k], Theta_tc[tc_end:,2,k],\
-				Theta_tc[tc_end:,3,k], Theta_tc[tc_end:,4,k],\
-				Theta_tc[tc_end:,5,k], Theta_tc[tc_end:,6,k] = Y_mid
+		v_tc[tc_end:,k], v_b_tc[tc_end:,k],\
+		Phi_tc[tc_end:,k], Theta_tc[tc_end:,0,k],\
+		Theta_tc[tc_end:,1,k], Theta_tc[tc_end:,2,k],\
+		Theta_tc[tc_end:,3,k], Theta_tc[tc_end:,4,k],\
+		Theta_tc[tc_end:,5,k], Theta_tc[tc_end:,6,k] = Y_mid
 
-		Psi_tc[tc_end:,k] = get_Psi(k_current, x_tc[tc_end:],\
-								Theta_tc[tc_end:,2,k],\
-								Phi_tc[tc_end:,k])
+		Psi_tc[tc_end:,k] =	- Phi_tc[tc_end:,k] - 12 * H_0 * H_0 * Omega_r *\
+							Theta_tc[tc_end:,2,k] /\
+							(c * c * k_current * k_current *\
+							np.exp(2*x_tc[tc_end:]))
 
-		y0 = delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
+		# Initial values for x_start_rec
+		y0 =	delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
 				Phi_tc[-1,k], Theta_tc[-1,0,k], Theta_tc[-1,1,k],\
 				Theta_tc[-1,2,k], Theta_tc[-1,3,k], Theta_tc[-1,4,k],\
 				Theta_tc[-1,5,k], Theta_tc[-1,6,k]
+		# end if
 
-	y0 = delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
-			Phi_tc[-1,k], Theta_tc[-1,0,k], Theta_tc[-1,1,k],\
-			Theta_tc[-1,2,k], Theta_tc[-1,3,k], Theta_tc[-1,4,k],\
-			Theta_tc[-1,5,k], Theta_tc[-1,6,k]
-#	print "Phi[-1,k]:",Phi[-1,k]
-#	print y0
-
-
-#	y0 = delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
-#			Phi[-1,k], Theta_tc[-1,0,k], Theta_tc[-1,1,k],\
-#			Theta_tc[-1,2,k], Theta_tc[-1,3,k], Theta_tc[-1,4,k],\
-#			Theta_tc[-1,5,k], Theta_tc[-1,6,k]
-
-
-#	delta[:tc_end,k], delta_b[:,k], v[:,k], v_b[:,k],\
-#	Phi[:,k], Theta[:,0,k], Theta[:,1,k], Theta[:,2,k],\
-#	Theta[:,3,k], Theta[:,4,k], Theta[:,5,k], Theta[:,6,k] = Y
-
-	# Solve Einstein-Boltzmann equations from tight coupling until today
+	# Solve Einstein-Boltzmann equations from x_start_rec until today
 	y = odeint(system_rhs, y0, x_t, args=(k_current,))
 
 	Y = [y[:,0], y[:,1], y[:,2], y[:,3], y[:,4], y[:,5], y[:,6],\
 			y[:,7], y[:,8], y[:,9], y[:,10], y[:,11]]
 
-#	delta[tc_end-1:,k], delta_b[tc_end-1:,k], v[tc_end-1:,k],\
-#	v_b[tc_end-1:,k], Phi[tc_end-1:,k], Theta[tc_end-1:,0,k],\
-#	Theta[tc_end-1:,1,k], Theta[tc_end-1:,2,k], Theta[tc_end-1:,3,k],\
-#	Theta[tc_end-1:,4,k], Theta[tc_end-1:,5,k], Theta[tc_end-1:,6,k] = Y
+	# Store solutions in arrays
+	delta[:,k], delta_b[:,k], v[:,k],\
+	v_b[:,k], Phi[:,k], Theta[:,0,k],\
+	Theta[:,1,k], Theta[:,2,k], Theta[:,3,k],\
+	Theta[:,4,k], Theta[:,5,k], Theta[:,6,k]  = Y
 
-#	Psi[tc_end-1:,k]	  = get_Psi(k_current, x_t[tc_end-1:],\
-#							Theta[tc_end-1:,2,k],\
-#							Phi[tc_end-1:,k])
-
-	delta[:,k], delta_b[:,k], v[:,k], v_b[:,k],\
-	Phi[:,k], Theta[:,0,k], Theta[:,1,k], Theta[:,2,k],\
-	Theta[:,3,k], Theta[:,4,k], Theta[:,5,k], Theta[:,6,k] = Y
-
-#	Psi[:,k] = get_Psi(k_current, x_t, Theta[:,2,k], Phi[:,k])
 	Psi[:,k] = - Phi[:,k] - 12 * H_0 * H_0 * Omega_r * Theta[:,2,k] /\
 				(c * c * k_current * k_current * np.exp(2*x_t))
 
-#	print Phi[:,k]
-				
-#	Psi[:,k] = - Phi[:,k] - 12 * H_0 * H_0 * 
-
+	# Store derivatives in arrays
 	dv_b[:,k] = system_rhs(Y, x_t, k_current)[3]
 	dPhi[:,k] = system_rhs(Y, x_t, k_current)[4]
 	dTheta[:,0,k], dTheta[:,1,k],\
@@ -466,19 +301,6 @@ for k in xrange(n_k):
 	dPsi[:,k] = - dPhi[:,k] - 12 * H_0 * H_0 * Omega_r * (dTheta[:,2,k] - 2*\
 				Theta[:,2,k]) / (c * c * k_current * k_current * np.exp(2*x_t))
 
-	# Store derivatives
-#	dPhi[tc_end-1:,k]		  = system_rhs(Y, x_t[tc_end-1:],\
-#								k_current)[4]
-#	dv_b[tc_end-1:,k]		  = system_rhs(Y, x_t[tc_end-1:],\
-#								k_current)[3]
-#	dTheta[tc_end-1:,0,k], dTheta[tc_end-1:,1,k], dTheta[tc_end-1:,2,k],\
-#	dTheta[tc_end-1:,3,k], dTheta[tc_end-1:,4,k], dTheta[tc_end-1:,5,k],\
-#	dTheta[tc_end-1:,6,k] = system_rhs(Y, x_t[tc_end-1:], k_current)[5:12]
-#	Psi[tc_end-1:,k]	  = y[:,12]
-
-#	dPhi[:,k] = sy
-
-
 end = time.time()
 
 if __name__ == "__main__":
@@ -486,10 +308,8 @@ if __name__ == "__main__":
 	print "Runtime: %g seconds." % (end - start)
 	start_write = time.time()
 	
-#	print delta_tc[:,0]
-#	print delta[:,0]
+	# Merge tight coupling and post-tight coupling arrays
 	delta_full		= np.concatenate((delta_tc, delta), axis=0)
-#	print delta_full[:,0]
 	delta_b_full	= np.concatenate((delta_b_tc, delta_b), axis=0)
 	v_full			= np.concatenate((v_tc, v), axis=0)
 	v_b_full		= np.concatenate((v_b_tc, v_b), axis=0)
@@ -498,11 +318,8 @@ if __name__ == "__main__":
 	Theta_full		= np.concatenate((Theta_tc, Theta), axis=0)
 	Psi_full		= np.concatenate((Psi_tc, Psi), axis=0)
 	x				= np.concatenate((x_tc, x_t), axis=0)
-#	X_full = np.concatenate((X, x_t), axis=1) 
 
 	for k in xrange(n_k):
-#		x = np.concatenate((X[:,k], x_t), axis=0)
-
 		# Write solutions to files
 		write2file("../data/milestone3/delta/delta_" + str(k) + ".txt",\
 				"Data for CDM overdensity for one mode of k: x delta", x,
