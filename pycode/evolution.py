@@ -7,16 +7,15 @@ Author: Vedad Hodzic
 E-mail:	vedad.hodzic@astro.uio.no
 """
 
-import numpy as np											# Functions, mathematical operators
-import matplotlib.pyplot as plt								# Plotting
-from scipy.integrate import odeint							# ODE solver
-from scipy.interpolate import splrep, splev					# Spline interpolation
-import time													# Time module for runtime
-from params import c, H_0, Omega_b, Omega_r, Omega_m		# Module for physical constants and parameters
-from CMBSpectrum import n_t, x_start_rec, x_t				# Import variables
-from CMBSpectrum import get_H_scaled, get_dH_scaled,\
-						get_eta, write2file					# Import functions
-from recombination import get_dtau, get_ddtau				# Import functions
+import numpy as np
+import matplotlib.pyplot as plt
+from scipy.integrate import odeint
+from scipy.interpolate import splrep, splev
+import time
+from params import c, H_0, Omega_b, Omega_r, Omega_m
+from CMBSpectrum import n_t, x_start_rec, x_t
+from CMBSpectrum import get_H_scaled, get_dH_scaled, get_eta, write2file
+from recombination import get_dtau, get_ddtau
 
 def system_rhs(y, x, k):
 	
@@ -68,7 +67,7 @@ def system_rhs(y, x, k):
 
 	return [delta_rhs, delta_b_rhs, v_rhs, v_b_rhs, Phi_rhs, Theta_0_rhs,\
 			Theta_1_rhs, Theta_2_rhs, Theta_3_rhs, Theta_4_rhs, Theta_5_rhs,\
-			Theta_6_rhs]#, _Psi]
+			Theta_6_rhs]
 
 def system_rhs_tc(y, x, k):
 
@@ -134,13 +133,13 @@ def get_tight_coupling_time(k):
 
 	while tight_coupling:
 		if x >= x_start_rec:
-			print "Third test."
+			print "First test."
 			return x_start_rec
 		elif abs(c * k / (get_H_scaled(x) * get_dtau(x))) > 0.1:
-			print "First test."
+			print "Second test."
 			return x
 		elif abs(get_dtau(x)) < 10:
-			print "Second test."
+			print "Third test."
 			return x
 		x += dx
 
@@ -151,7 +150,7 @@ a_init	  = 1e-8
 x_init	  =	np.log(a_init)
 k_min	  = 0.1 * H_0 / c
 k_max	  = 1e3 * H_0 / c
-n_k		  = 101
+n_k		  = 100
 lmax_int  =	6
 ks		  = np.zeros(n_k)
 
@@ -221,8 +220,9 @@ for k in xrange(n_k):
 	
 	for l in xrange(2,lmax_int+1):
 		Theta_tc[:tc_end+1,l,k] = - l / (2.0*l + 1) * c * k_current *\
-					Theta_tc[:tc_end+1,l-1,k] / (get_H_scaled(x_tc[:tc_end+1]) *\
-							get_dtau(x_tc[:tc_end+1]))
+									Theta_tc[:tc_end+1,l-1,k] /\
+									(get_H_scaled(x_tc[:tc_end+1]) *\
+									get_dtau(x_tc[:tc_end+1]))
 
 	Psi_tc[:tc_end+1,k] = - Phi_tc[:tc_end+1,k] - 12 * H_0 * H_0 * Omega_r *\
 							Theta_tc[:tc_end+1,2,k] /\
@@ -230,7 +230,7 @@ for k in xrange(n_k):
 							np.exp(2*x_tc[:tc_end+1]))
 
 	# Initial values for x_start_rec if last point in TC grid was x_start_rec
-	y0 =	delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
+	y0	  = delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
 			Phi_tc[-1,k], Theta_tc[-1,0,k], Theta_tc[-1,1,k],\
 			Theta_tc[-1,2,k], Theta_tc[-1,3,k], Theta_tc[-1,4,k],\
 			Theta_tc[-1,5,k], Theta_tc[-1,6,k]
@@ -270,7 +270,7 @@ for k in xrange(n_k):
 							np.exp(2*x_tc[tc_end:]))
 
 		# Initial values for x_start_rec
-		y0 =	delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
+		y0	  = delta_tc[-1,k], delta_b_tc[-1,k], v_tc[-1,k], v_b_tc[-1,k],\
 				Phi_tc[-1,k], Theta_tc[-1,0,k], Theta_tc[-1,1,k],\
 				Theta_tc[-1,2,k], Theta_tc[-1,3,k], Theta_tc[-1,4,k],\
 				Theta_tc[-1,5,k], Theta_tc[-1,6,k]
@@ -303,6 +303,7 @@ for k in xrange(n_k):
 
 end = time.time()
 
+# Called when module is run explicitly only
 if __name__ == "__main__":
 
 	print "Runtime: %g seconds." % (end - start)
@@ -349,7 +350,7 @@ if __name__ == "__main__":
 				"Data for Theta_0 for one mode of k: x Theta_0",\
 				x, Theta_full[:,0,k])
 
-		# Write derivatives to files
+		# Write derivatives to files (to check if they are correct)
 		write2file("../data/milestone3/dv_b/dv_b_" + str(k) + ".txt",\
 				"Data for derivatives of baryons for one mode of k: x v_b",\
 				x_t, dv_b[:,k])
