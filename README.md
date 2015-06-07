@@ -16,12 +16,16 @@ recombination history of the universe. We calculate the free electron fraction,
 the optical depth and visibility function as functions of time.
 ***
 #### Milestone III: The evolution of structures in the universe
-###### In progress
+###### Completed
 Here we solve the linearized Einstein and Boltzmann equations for photons,
 baryons and dark matter in order to compute the evolution of structures in our
 universe.
 ***
 #### Milestone IV: The CMB power spectrum
+###### Completed
+Here we pull everything from the previous milestones together to calculate the
+CMB power spectrum, and vary cosmological parameters to find the best fit to
+Planck 2015 data.
 ***
 
 Description of the different milestones will be updated continuously.
@@ -29,5 +33,5 @@ Description of the different milestones will be updated continuously.
 To see the newest version of the code at any time, check the `dev-mac` branch:
 * `pycode` contains Python code for the milestones, including plotting.
 * ~~`src` contains Fortran 90 code that will be used throughout the rest of the milestones.~~
-Continued with Python. Have not had to use Fortran (yet...)
+Used Python throughout.
 
